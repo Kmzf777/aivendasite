@@ -5,19 +5,20 @@ import estilo from "./CardObjecao.module.css";
 
 type Props = {
   card: Card;
-  /** A seta ↓ está presa (teclado ou dedo no botão). */
-  aberto: boolean;
-  aoSegurar: (v: boolean) => void;
 };
 
-// O card é a única coisa acesa na tela.
+// O card é a única coisa acesa na tela. Três camadas, nesta ordem:
 //
-// Mostra HEADLINE + PIVOT, não o argumento:
-//   headline -> a frase que o vendedor vai FALAR (serifa, corpo grande);
-//   pivot    -> a regra que evita o erro (cor --sinal, glifo de alerta).
-// O argumento completo é longo demais para ser lido no meio de uma frase
-// do cliente; ele fica a uma tecla de distância, segurando a seta ↓.
-export default function CardObjecao({ card, aberto, aoSegurar }: Props) {
+//   nome      -> que objeção é (identificação, corpo pequeno);
+//   deixa     -> a headline, a versão curta (basta numa olhada rápida);
+//   ARGUMENTO -> o que o vendedor vai FALAR. É o maior corpo da tela;
+//   pivot     -> a regra que evita o erro clássico (--sinal, com alerta).
+//
+// A primeira versão escondia o argumento atrás de uma tecla e promovia a
+// headline. Estava errado: o argumento é o texto que contorna a objeção,
+// e é a primeira coisa que o vendedor procura. A headline costuma ser um
+// pedaço dele, então servia de resumo e não de substituto.
+export default function CardObjecao({ card }: Props) {
   const alerta = card.tipo === "alerta";
   const pct = Math.round(card.confianca * 100);
 
@@ -36,7 +37,20 @@ export default function CardObjecao({ card, aberto, aoSegurar }: Props) {
         </span>
       </header>
 
-      <p className={estilo.headline}>{card.headline}</p>
+      {/* A deixa, curta. Fica ACIMA do argumento porque numa olhada de meio
+          segundo ela basta; quem precisa do texto inteiro lê a linha de
+          baixo. A headline costuma ser um pedaço do próprio argumento. */}
+      {card.headline && <p className={estilo.deixa}>{card.headline}</p>}
+
+      {/* O argumento é o que o vendedor vai FALAR para contornar, então é
+          ele que ocupa a linha mais nobre e o maior corpo. Foi o que a
+          primeira versão errou: escondia atrás de uma tecla justamente o
+          texto que resolve a objeção. */}
+      {card.argumento ? (
+        <p className={estilo.argumento}>{card.argumento}</p>
+      ) : (
+        <p className={estilo.semArg}>Sem argumento escrito para esta objeção.</p>
+      )}
 
       {card.pivot && (
         <>
@@ -55,33 +69,8 @@ export default function CardObjecao({ card, aberto, aoSegurar }: Props) {
       )}
 
       <footer className={estilo.pe}>
-        {card.argumento ? (
-          <button
-            type="button"
-            className={`${estilo.segurar} ${aberto ? estilo.segurando : ""}`}
-            // Segurar, não clicar: o argumento só fica na tela enquanto a
-            // seta está presa. Pointer cobre mouse, dedo e caneta.
-            onPointerDown={() => aoSegurar(true)}
-            onPointerUp={() => aoSegurar(false)}
-            onPointerLeave={() => aoSegurar(false)}
-            onPointerCancel={() => aoSegurar(false)}
-            aria-expanded={aberto}
-          >
-            <kbd aria-hidden>&#8595;</kbd>
-            <span>{aberto ? "solte para fechar" : "ver argumento"}</span>
-          </button>
-        ) : (
-          <span className={`telemetria ${estilo.semArg}`}>sem argumento no catálogo</span>
-        )}
         <span className={`telemetria ${estilo.ms}`}>{card.ms} ms</span>
       </footer>
-
-      {aberto && card.argumento && (
-        <div className={estilo.argumento}>
-          <span className="rotulo">argumento completo</span>
-          <p>{card.argumento}</p>
-        </div>
-      )}
     </article>
   );
 }
