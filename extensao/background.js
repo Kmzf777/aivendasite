@@ -30,9 +30,13 @@ async function carregarObjecoes() {
     console.log("[COPILOTO] servidor fora, usando as 7 de exemplo:", e.message);
   }
 }
-carregarObjecoes();
-chrome.runtime.onInstalled.addListener(carregarObjecoes);
-chrome.runtime.onStartup.addListener(carregarObjecoes);
+// Guarda a promise: o service worker do MV3 morre depois de ~30s parado e
+// sobe de novo na proxima mensagem, com objecoes ainda nas 7 de exemplo.
+// Sem esperar por ela, a primeira decisao depois de cada hibernacao sairia
+// contra o catalogo errado.
+let prontoObjecoes = carregarObjecoes();
+chrome.runtime.onInstalled.addListener(() => { prontoObjecoes = carregarObjecoes(); });
+chrome.runtime.onStartup.addListener(() => { prontoObjecoes = carregarObjecoes(); });
 
 // ==================================================================
 // Publicar para o painel separado
@@ -59,6 +63,9 @@ async function decidir(linha, tabId) {
   // So a fala do cliente decide. A sua serve de contexto.
   if (linha.quem !== "cliente") return;
 
+  // Nunca decide contra um catalogo que ainda esta chegando (ver acima).
+  await prontoObjecoes;
+
   const meu = ++seq;
   const t0 = Date.now();
   let json;
@@ -76,7 +83,16 @@ async function decidir(linha, tabId) {
     if (!r.ok) throw new Error(json.error || ("HTTP " + r.status));
   } catch (e) {
     console.error("[COPILOTO] falha no Jev:", e.message);
+    // O painel tambem depende do servidor: se ele esta fora, esse publicar
+    // nao chega em ninguem. Sem avisar a aba, o overlay ficaria dizendo
+    // "Ouvindo a call" para sempre sem nada acontecer.
     publicar({ tipo: "erro", mensagem: "Falha ao falar com o Jev: " + e.message });
+    if (tabId != null) {
+      chrome.tabs.sendMessage(tabId, {
+        tipo: "aviso",
+        mensagem: "Não consegui falar com o servidor local. Rode `node server.js` na pasta aivenda."
+      }).catch(() => {});
+    }
     return;
   }
   const ms = Date.now() - t0;
@@ -105,6 +121,6 @@ async function decidir(linha, tabId) {
 chrome.runtime.onMessage.addListener((msg, sender) => {
   if (!msg) return;
   if (msg.tipo === "linha") decidir(msg, sender.tab && sender.tab.id);
-  if (msg.tipo === "recarregar-objecoes") carregarObjecoes();
+  if (msg.tipo === "recarregar-objecoes") prontoObjecoes = carregarObjecoes();
   if (msg.tipo === "zerar") { falas = []; ultimaMostrada = null; seq = 0; }
 });

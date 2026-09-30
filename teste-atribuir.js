@@ -1,9 +1,11 @@
 // Testa a atribuição de falante por energia de dois canais. Offline.
-const { ATRIB, TECLA, quemFalou, quemFalouPorTecla, dominancia } = require("./lib/atribuir.js");
+const { ATRIB, TECLA, quemFalou, quemFalouPorTecla,
+        fracaoApertada, quemFalouPorTransicoes, dominancia } = require("./lib/atribuir.js");
 
-let falhas = 0;
+let falhas = 0, total = 0;
 const checa = (n, c, extra) => {
   console.log((c ? "  ok   " : "  FALHA") + " " + n + (c || extra === undefined ? "" : " -> " + JSON.stringify(extra)));
+  total++;
   if (!c) falhas++;
 };
 
@@ -83,5 +85,87 @@ checa("respeita a janela (fim solto)", quemFalouPorTecla(linhaT, 2000, 3000) ===
 checa("limiares configuráveis", quemFalouPorTecla(tec(0, 20, i => i < 10), 0, 1000, { limiarSeu: 0.5 }) === "vendedor");
 checa("limiar padrão de seu é 0.6", TECLA.limiarSeu === 0.6);
 
-console.log(falhas === 0 ? "\nTUDO OK" : "\n" + falhas + " FALHA(S)");
+// ---------- push-to-talk por transições ----------
+// Por que existe um segundo bloco de testes para o mesmo gesto: o Chrome
+// estrangula setInterval para ~1 Hz com a aba oculta/sem foco (medido:
+// 999/1001/1000/1008/991 ms com AMOSTRA_MS = 50). Amostrar a tecla por timer
+// é grosseiro demais; integrar as transições de keydown/keyup é exato.
+console.log("");
+console.log("push-to-talk por transições (imune ao estrangulamento de setInterval)");
+
+console.log("\n  janela inteira num estado só");
+checa("presa a janela inteira -> você",
+  quemFalouPorTransicoes([{ t: -500, apertado: true }], 0, 1000) === "vendedor");
+checa("solta a janela inteira -> cliente",
+  quemFalouPorTransicoes([{ t: -500, apertado: false }], 0, 1000) === "cliente");
+checa("fração de janela inteiramente presa é 1",
+  fracaoApertada([{ t: -500, apertado: true }], 0, 1000) === 1);
+checa("fração de janela inteiramente solta é 0",
+  fracaoApertada([{ t: -500, apertado: false }], 0, 1000) === 0);
+
+console.log("\n  janela sem nenhuma transição: vale o estado vigente no início");
+checa("lista vazia, estado inicial solto -> cliente",
+  quemFalouPorTransicoes([], 0, 1000) === "cliente");
+checa("lista vazia, estado inicial presa -> você",
+  quemFalouPorTransicoes([], 0, 1000, { estadoInicial: true }) === "vendedor");
+checa("janela depois da última transição herda o estado dela",
+  quemFalouPorTransicoes([{ t: 0, apertado: true }], 5000, 6000) === "vendedor");
+checa("entrada não-array -> null", quemFalouPorTransicoes(null, 0, 1000) === null);
+checa("transições com t inválido são ignoradas",
+  fracaoApertada([{ t: NaN, apertado: true }, { t: -1, apertado: false }], 0, 1000) === 0);
+
+console.log("\n  transição no meio da janela");
+checa("soltou na metade (50%) -> não atribui",
+  quemFalouPorTransicoes([{ t: -1, apertado: true }, { t: 500, apertado: false }], 0, 1000) === null);
+checa("soltou a 800 ms (80%) -> você",
+  quemFalouPorTransicoes([{ t: -1, apertado: true }, { t: 800, apertado: false }], 0, 1000) === "vendedor");
+checa("apertou só nos últimos 100 ms (10%) -> cliente",
+  quemFalouPorTransicoes([{ t: -1, apertado: false }, { t: 900, apertado: true }], 0, 1000) === "cliente");
+checa("três toques de 100 ms somam 30%",
+  fracaoApertada([
+    { t: 0, apertado: false },
+    { t: 100, apertado: true }, { t: 200, apertado: false },
+    { t: 300, apertado: true }, { t: 400, apertado: false },
+    { t: 500, apertado: true }, { t: 600, apertado: false }
+  ], 0, 1000) === 0.3);
+checa("lista fora de ordem dá o mesmo resultado (80%)",
+  fracaoApertada([{ t: 800, apertado: false }, { t: -1, apertado: true }], 0, 1000) === 0.8);
+
+console.log("\n  recorte nas bordas");
+const linhaTr = [
+  { t: 0,    apertado: false },
+  { t: 200,  apertado: true },    // antes da janela: define o estado de entrada
+  { t: 2500, apertado: false }    // depois da janela: não pode influenciar
+];
+checa("transição antes da janela define o estado de entrada",
+  quemFalouPorTransicoes(linhaTr, 1000, 2000) === "vendedor");
+checa("transição depois da janela não influencia (fração = 1)",
+  fracaoApertada(linhaTr, 1000, 2000) === 1);
+checa("a janela seguinte já vê o estado solto",
+  quemFalouPorTransicoes(linhaTr, 3000, 4000) === "cliente");
+checa("transição exatamente no início da janela conta como estado de entrada",
+  fracaoApertada([{ t: 1000, apertado: true }], 1000, 2000) === 1);
+checa("transição exatamente no fim da janela fica de fora",
+  fracaoApertada([{ t: 0, apertado: false }, { t: 2000, apertado: true }], 1000, 2000) === 0);
+checa("janela sem duração -> null",
+  quemFalouPorTransicoes([{ t: 0, apertado: true }], 1000, 1000) === null);
+checa("janela invertida -> null",
+  quemFalouPorTransicoes([{ t: 0, apertado: true }], 2000, 1000) === null);
+
+console.log("\n  limiares e o bug que isto conserta");
+checa("limiares configuráveis",
+  quemFalouPorTransicoes([{ t: -1, apertado: true }, { t: 500, apertado: false }],
+    0, 1000, { limiarSeu: 0.5 }) === "vendedor");
+// O mesmo gesto real, medido dos dois jeitos: você segurou de 0 a 900 ms
+// numa frase de 0 a 1000 ms (90% -> claramente sua).
+const gestoReal = [{ t: 0, apertado: true }, { t: 900, apertado: false }];
+checa("por transições o gesto de 90% é seu",
+  quemFalouPorTransicoes(gestoReal, 0, 1000) === "vendedor");
+// Com a aba oculta o Chrome entrega ~1 amostra por segundo. Se a única
+// amostra da frase cair depois de você soltar, a MESMA fala vira do cliente.
+checa("por amostragem estrangulada (1 Hz) a mesma fala vira do cliente",
+  quemFalouPorTecla([{ t: 950, tecla: false }], 0, 1000) === "cliente");
+
+console.log(falhas === 0 ? "\n" + total + " testes - TUDO OK"
+                        : "\n" + falhas + " FALHA(S) em " + total + " testes");
 process.exit(falhas === 0 ? 0 : 1);

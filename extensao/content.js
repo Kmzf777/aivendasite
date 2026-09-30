@@ -27,6 +27,8 @@ const CONFIG_CAP = {
 let meuNome = null;
 let ultimaCamada = null;
 let linhasVistas = 0;
+let containerCache = null;
+let ticksSemBloco = 0;
 
 // ==================================================================
 // Quem sou eu
@@ -34,7 +36,10 @@ let linhasVistas = 0;
 // data-self-name esta no proprio tile de video e nao exige abrir painel.
 function descobrirMeuNome() {
   const tile = document.querySelector("[data-self-name]");
-  if (tile) return tile.getAttribute("data-self-name");
+  // O atributo pode existir vazio. Se devolvesse "" aqui, o retry do inicio
+  // ficaria girando para sempre sem nunca cair na heuristica abaixo.
+  const doTile = tile ? (tile.getAttribute("data-self-name") || "").trim() : "";
+  if (doTile) return doTile;
   const eu = [...document.querySelectorAll("[data-participant-id]")]
     .map(e => e.textContent || "")
     .find(t => /\((você|voce|you)\)/i.test(t));
@@ -74,6 +79,15 @@ async function ligarLegendas() {
   if (legendasLigadas()) return true;
   const bt = acharBotaoCC();
   if (!bt) { log("botao CC nao encontrado"); return false; }
+  // Se o proprio botao diz que a legenda JA esta ligada, clicar DESLIGA a
+  // legenda do usuario. Isso acontece justo no pior caso: os jsname do
+  // container envelheceram, legendasLigadas() devolve false com a legenda na
+  // tela, e o "conserto" automatico apagaria o unico sinal que temos.
+  const pressionado = bt.getAttribute("aria-pressed") || bt.getAttribute("aria-checked");
+  if (pressionado === "true") {
+    log("o botao diz que a legenda ja esta ligada; nao vou clicar");
+    return false;
+  }
   bt.click();
   for (let i = 0; i < 20; i++) {
     await new Promise(r => setTimeout(r, 150));
@@ -87,8 +101,14 @@ async function ligarLegendas() {
 // Achar o container das legendas — tres camadas
 // ==================================================================
 function acharContainer() {
+  // Cache: o observer dispara muitas vezes por segundo numa call e a busca
+  // pelo fallback le innerText, que forca layout. Revalida por isConnected,
+  // entao desligar o CC (o container sai do DOM) solta o cache sozinho.
+  if (containerCache && containerCache.isConnected) return containerCache;
+  containerCache = null;
+
   const porJsname = document.querySelector(`[jsname="${SEL.container}"]`);
-  if (porJsname) { ultimaCamada = "jsname"; return porJsname; }
+  if (porJsname) { ultimaCamada = "jsname"; containerCache = porJsname; return porJsname; }
 
   // Fallback aria-live. CUIDADO: os anuncios de status do Meet usam a MESMA
   // aria-live das legendas. Transcricoes inteiras ja sairam so com aviso de
@@ -97,7 +117,7 @@ function acharContainer() {
   const comFalante = vivos.find(r =>
     r.querySelector(`[jsname="${SEL.nome}"]`) ||
     [...r.children].some(c => c.innerText && c.innerText.trim().split("\n").length >= 2));
-  if (comFalante) { ultimaCamada = "aria-live"; return comFalante; }
+  if (comFalante) { ultimaCamada = "aria-live"; containerCache = comFalante; return comFalante; }
 
   return null;
 }
@@ -115,10 +135,12 @@ function lerBlocos(container) {
   return blocos.map(b => {
     const nomeEl = b.querySelector(`[jsname="${SEL.nome}"]`);
     const txtEl = b.querySelector(`[jsname="${SEL.texto}"]`);
-    let nome = nomeEl ? nomeEl.innerText.trim() : "";
-    let texto = txtEl ? txtEl.innerText.trim() : "";
+    // innerText nao existe em elemento SVG: sem o || "" isso viraria
+    // TypeError dentro do observer, uma vez por mutacao.
+    let nome = nomeEl ? (nomeEl.innerText || "").trim() : "";
+    let texto = txtEl ? (txtEl.innerText || "").trim() : "";
     if (!nome || !texto) {
-      const partes = b.innerText.split("\n").map(s => s.trim()).filter(Boolean);
+      const partes = (b.innerText || "").split("\n").map(s => s.trim()).filter(Boolean);
       if (partes.length >= 2) {
         if (!nome) nome = partes[0];
         if (!texto) texto = partes.slice(1).join(" ");
@@ -141,25 +163,53 @@ function commitar(nome, onLinha) {
   const texto = (atual.texto || "").trim();
   if (!texto) return;
 
-  // O Meet reescreve a linha enquanto a pessoa fala. Se o que ja foi
-  // committado comeca com este texto, e a mesma frase de novo.
+  // O Meet reescreve a linha enquanto a pessoa fala, nos DOIS sentidos, e a
+  // regra antiga so cobria um deles:
+  //  - encurta/rerenderiza: o texto ja committado comeca com o texto novo.
+  //    E a mesma frase de novo -> descarta.
+  //  - cresce: o texto novo comeca com o ja committado. Acontece sempre que a
+  //    pessoa pausa mais que o debounce e continua no MESMO bloco. Antes a
+  //    frase inteira era reenviada, com o prefixo ja processado dentro dela
+  //    (chamada duplicada no Jev e card repetido). Agora vai so o pedaco novo.
   const antes = jaCommitado.get(nome) || "";
   if (antes && (antes === texto || antes.startsWith(texto))) return;
+
+  let paraEnviar = texto;
+  if (antes && texto.startsWith(antes)) paraEnviar = texto.slice(antes.length).trim();
   jaCommitado.set(nome, texto);
+  if (!paraEnviar) return;
 
   linhasVistas++;
   const souEu = meuNome && nome.trim().toLowerCase() === meuNome.trim().toLowerCase();
-  log("linha", nome, souEu ? "(voce)" : "(cliente)", texto);
-  onLinha({ nome, texto, quem: souEu ? "vendedor" : "cliente" });
+  log("linha", nome, souEu ? "(voce)" : "(cliente)", paraEnviar);
+  onLinha({ nome, texto: paraEnviar, quem: souEu ? "vendedor" : "cliente" });
 }
 
 function aoMudar(onLinha) {
   const container = acharContainer();
   if (!container) return;
   const blocos = lerBlocos(container);
-  const presentes = new Set(blocos.map(b => b.nome));
 
+  // Container achado mas ilegivel por varios segundos: pode ser que o cache
+  // tenha agarrado a regiao aria-live errada (aviso de sistema). Solta.
+  if (!blocos.length) {
+    if (++ticksSemBloco > 40) { containerCache = null; ticksSemBloco = 0; }
+  } else {
+    ticksSemBloco = 0;
+  }
+
+  // O Meet pode mostrar DOIS blocos do mesmo falante ao mesmo tempo (turnos
+  // consecutivos). Com a chave so no nome, o texto de um bloco sobrescrevia o
+  // do outro a cada passada; o clearTimeout rearmava o debounce sem parar e o
+  // commit nunca chegava a acontecer. Junta os blocos do mesmo falante na
+  // ordem do DOM (que e a ordem cronologica) e trata como um texto so.
+  const porFalante = new Map();
   blocos.forEach(({ nome, texto }) => {
+    const antes = porFalante.get(nome);
+    porFalante.set(nome, antes ? antes + " " + texto : texto);
+  });
+
+  porFalante.forEach((texto, nome) => {
     const anterior = emAndamento.get(nome);
     if (anterior && anterior.texto === texto) return;
     if (anterior) clearTimeout(anterior.timer);
@@ -169,7 +219,7 @@ function aoMudar(onLinha) {
 
   // Bloco sumiu do DOM = o falante terminou. Commita na hora.
   [...emAndamento.keys()].forEach(nome => {
-    if (!presentes.has(nome)) {
+    if (!porFalante.has(nome)) {
       clearTimeout(emAndamento.get(nome).timer);
       commitar(nome, onLinha);
     }
@@ -177,7 +227,17 @@ function aoMudar(onLinha) {
 }
 
 function observar(onLinha) {
-  const obs = new MutationObserver(() => aoMudar(onLinha));
+  // O Meet muta o DOM sem parar (video, relogio, presenca, tooltips) e o
+  // observer e em document.body com subtree. Sem coalescer, aoMudar() roda
+  // dezenas de vezes por segundo e cada passada le innerText, que forca
+  // layout numa pagina que ja esta desenhando video. 120ms fica bem abaixo
+  // do debounce de 700ms, entao nao muda a semantica do commit.
+  let agendado = false;
+  const obs = new MutationObserver(() => {
+    if (agendado) return;
+    agendado = true;
+    setTimeout(() => { agendado = false; aoMudar(onLinha); }, 120);
+  });
   obs.observe(document.body, { childList: true, subtree: true, characterData: true });
   return obs;
 }
@@ -185,6 +245,10 @@ function observar(onLinha) {
 // ==================================================================
 // Diagnostico — rodar no console da aba do Meet
 // ==================================================================
+// ATENCAO: content script roda em mundo isolado. Este `window` NAO e o da
+// pagina. No DevTools, troque o seletor de contexto (ao lado do "top") para
+// "Copiloto de Call" antes de chamar diagnostico() — no contexto "top" a
+// funcao nao existe.
 function diagnostico() {
   return {
     meuNome,
@@ -207,7 +271,11 @@ const FASES_NOME = {
 let elOverlay = null;
 
 function montarOverlay() {
-  if (document.getElementById("copiloto-overlay")) return;
+  const existente = document.getElementById("copiloto-overlay");
+  // Se o overlay ja existe (script injetado duas vezes no mesmo documento) e
+  // saissemos aqui sem setar elOverlay, pintarDecisao() voltaria vazio para
+  // sempre: o card nunca apareceria e nada denunciaria o motivo.
+  if (existente) { elOverlay = existente; return; }
   const d = document.createElement("div");
   d.id = "copiloto-overlay";
   d.innerHTML =
@@ -253,6 +321,15 @@ function arrastavel(caixa, alca) {
   document.addEventListener("mouseup", () => { arrastando = false; });
 }
 
+// Mensagem honesta no corpo do overlay (usa textContent, nao innerHTML).
+function avisarOverlay(txt) {
+  if (!elOverlay) return;
+  const corpo = elOverlay.querySelector(".cp-corpo");
+  if (!corpo) return;
+  corpo.innerHTML = '<div class="cp-vazio"></div>';
+  corpo.querySelector(".cp-vazio").textContent = txt;
+}
+
 function pintarFase(fase) {
   if (!elOverlay || !fase) return;
   elOverlay.querySelectorAll(".cp-fase").forEach(e =>
@@ -278,6 +355,9 @@ function pintarDecisao(ev) {
     const s = document.createElement("span");
     s.textContent = ev.objecao.nome;
     h.appendChild(s);
+    // Numa call longa o historico cresceria sem fim e comeria a altura do
+    // card, porque .cp-hist nao encolhe (flex-shrink:0).
+    while (h.children.length > 12) h.removeChild(h.firstChild);
   } else if (ev.acao === "alerta") {
     corpo.innerHTML =
       '<div class="cp-card neutro"><div class="cp-rot">Objeção não catalogada</div>' +
@@ -289,7 +369,9 @@ function pintarDecisao(ev) {
 }
 
 chrome.runtime.onMessage.addListener(ev => {
-  if (ev && ev.tipo === "decisao") pintarDecisao(ev);
+  if (!ev) return;
+  if (ev.tipo === "decisao") pintarDecisao(ev);
+  if (ev.tipo === "aviso") avisarOverlay(ev.mensagem || "");
 });
 
 // ==================================================================
@@ -298,7 +380,15 @@ chrome.runtime.onMessage.addListener(ev => {
 (async () => {
   montarOverlay();
   meuNome = descobrirMeuNome();
-  await ligarLegendas();
+  const ligou = await ligarLegendas();
+
+  // Degradar calado seria pior: o overlay diria "Ouvindo a call" com a
+  // legenda desligada e nada apareceria nunca.
+  let avisando = false;
+  if (!ligou && !legendasLigadas()) {
+    avisarOverlay("Não consegui ligar as legendas do Meet. Ligue o CC na barra do Meet — sem legenda eu não ouço nada.");
+    avisando = true;
+  }
 
   if (!meuNome) {
     // Sem saber quem e voce, TODA fala viraria "cliente" e o card dispararia
@@ -311,9 +401,19 @@ chrome.runtime.onMessage.addListener(ev => {
   }
 
   observar(linha => {
+    // Chegou legenda: o aviso acima ficou velho.
+    if (avisando) { avisarOverlay("Ouvindo a call."); avisando = false; }
     // So manda se ja sabemos separar os falantes.
     if (!meuNome) return;
-    chrome.runtime.sendMessage({ tipo: "linha", ...linha });
+    // Depois de recarregar a extensao, o canal deste content script morre e
+    // sendMessage lanca "Extension context invalidated" — sincrono num caso,
+    // como promise rejeitada no outro. Sem isso, um erro por fala no console.
+    try {
+      const p = chrome.runtime.sendMessage({ tipo: "linha", ...linha });
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch (e) {
+      log("nao consegui mandar a linha:", e && e.message);
+    }
   });
 
   // A luz verde diz se as legendas estao vivas.
