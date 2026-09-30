@@ -67,6 +67,83 @@ function quemFalouPorTecla(amostras, de, ate, cfg) {
   return null;   // a tecla mudou no meio da frase: nao da para separar com honestidade
 }
 
+// ------------------------------------------------------------------
+// Push-to-talk por TRANSICOES - e esta que a tela usa de verdade.
+//
+// POR QUE NAO AMOSTRAR A TECLA COM setInterval (leia antes de "simplificar"):
+// o Chrome estrangula setInterval para ~1 Hz quando a aba esta oculta ou sem
+// foco. Medicao real nesta maquina, com AMOSTRA_MS = 50:
+//
+//   intervalos entre amostras: 999, 1001, 1000, 1008, 991 ms
+//   document.visibilityState: "hidden" - document.hasFocus(): false
+//   taxa efetiva: 1,1 Hz em vez de 20 Hz
+//
+// Ou seja: uma frase de 2 segundos rendia 2 amostras em vez de 40. A fracao
+// que decide quem falou virava um chute de resolucao 50%.
+//
+// keydown/keyup JA sao eventos com timestamp proprio e exato. Guardando so as
+// TRANSICOES ([{t, apertado}]) e integrando os intervalos dentro da janela, a
+// fracao fica exata ao milissegundo, com zero timers e imune a estrangulamento.
+//
+// `quemFalouPorTecla` continua acima, intacto, porque os testes antigos
+// dependem dela e porque ela documenta o metodo que esta sendo aposentado.
+// Mas nao a use em codigo novo.
+// ------------------------------------------------------------------
+
+// transicoes: [{ t, apertado }] - uma entrada por keydown/keyup, com `t` na
+//   mesma base de tempo de `de`/`ate` (na tela: relogio de parede em ms).
+//   Nao precisa vir ordenada.
+// estadoInicial: estado da tecla ANTES da primeira transicao da lista
+//   (default false = solta). A tela semeia a lista com o estado conhecido no
+//   inicio da call, mas quem chamar sem semente pode declarar o estado aqui.
+//
+// Devolve a fracao 0..1 do tempo da janela com a tecla presa, ou null quando
+// a janela nao tem duracao ou a entrada nao e utilizavel.
+//
+// Bordas: janela meio-aberta [de, ate). Uma transicao exatamente em `de` conta
+// como o estado vigente no inicio da janela; uma exatamente em `ate` fica de
+// fora (pertence a frase seguinte). Sem isso duas frases vizinhas contariam o
+// mesmo instante duas vezes.
+function fracaoApertada(transicoes, de, ate, estadoInicial) {
+  if (!Array.isArray(transicoes)) return null;
+  const dur = ate - de;
+  if (!(dur > 0)) return null;
+
+  const ts = transicoes
+    .filter(x => x && typeof x.t === "number" && isFinite(x.t))
+    .sort((a, b) => a.t - b.t);
+
+  // Estado no instante `de`: manda a ultima transicao com t <= de. Se nao
+  // houver nenhuma, a janela comecou antes do que temos guardado e vale o
+  // estado inicial declarado.
+  let estado = !!estadoInicial;
+  let i = 0;
+  while (i < ts.length && ts[i].t <= de) { estado = !!ts[i].apertado; i++; }
+
+  // Integra os intervalos, recortando nas bordas da janela.
+  let presa = 0, cursor = de;
+  for (; i < ts.length; i++) {
+    if (ts[i].t >= ate) break;          // daqui pra frente e fora da janela
+    if (estado) presa += ts[i].t - cursor;
+    cursor = ts[i].t;
+    estado = !!ts[i].apertado;
+  }
+  if (estado) presa += ate - cursor;    // ultimo trecho, ate a borda direita
+
+  return presa / dur;
+}
+
+// Mesmos limiares de quemFalouPorTecla, so muda a fonte da fracao.
+// cfg aceita tambem { estadoInicial } (ver fracaoApertada).
+function quemFalouPorTransicoes(transicoes, de, ate, cfg) {
+  const c = Object.assign({}, TECLA, cfg || {});
+  const fracao = fracaoApertada(transicoes, de, ate, c.estadoInicial);
+  if (fracao === null) return null;
+  if (fracao >= c.limiarSeu) return "vendedor";
+  if (fracao <= c.limiarCliente) return "cliente";
+  return null;   // a tecla mudou no meio da frase: nao da para separar com honestidade
+}
+
 // Diagnostico para a tela: o quanto um canal dominou o outro.
 function dominancia(amostras, de, ate) {
   const jan = (amostras || []).filter(x => x.t >= de && x.t <= ate);
@@ -79,5 +156,10 @@ function dominancia(amostras, de, ate) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { ATRIB, TECLA, quemFalou, quemFalouPorTecla, dominancia };
+  module.exports = {
+    ATRIB, TECLA,
+    quemFalou, quemFalouPorTecla,
+    fracaoApertada, quemFalouPorTransicoes,
+    dominancia
+  };
 }

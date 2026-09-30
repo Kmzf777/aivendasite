@@ -197,13 +197,24 @@
 const CRU = { echoCancellation:false, noiseSuppression:false, autoGainControl:false };
 const AMOSTRA_MS = 50;      // resolucao da medida de energia
 
+// Ancora para traduzir timestamp de EVENTO (DOMHighResTimeStamp, contado do
+// time origin da pagina, igual a performance.now()) para relogio de parede
+// (Date.now()), que e a base das janelas de frase.
+const ANCORA_EVENTO = Date.now() - performance.now();
+const paraRelogio = ts => (typeof ts === "number" && ts > 0 ? ANCORA_EVENTO + ts : Date.now());
+
 const $ = id => document.getElementById(id);
 let objecoes = JSON.parse(JSON.stringify(OBJECOES_EXEMPLO));
 let ctx, anV, anC, dest, streams = [], rec = null, timerNivel = null;
+let medidor = null, ganhoMudo = null, usandoWorklet = false, ancoraCtx = 0;
 let ouvindo = false, falas = [], ultimaMostrada = null, seq = 0;
 let janela = [], tUltimoFinal = 0;
 let modo = "tecla";        // "tecla" = push-to-talk | "dois" = duas entradas
 let teclaApertada = false;
+// Transicoes da tecla: [{t, apertado}], uma entrada por keydown/keyup, em
+// relogio de parede. NAO existe amostragem periodica da tecla - o porque esta
+// no comentario grande de lib/atribuir.js e na secao Push-to-talk abaixo.
+let transicoes = [];
 let latencias = [], decisoes = 0, custoTotal = 0;
 
 function aviso(msg, bom) {
@@ -252,7 +263,7 @@ function conferirEscolha() {
     ? "Escolha as duas entradas acima. Elas precisam ser dispositivos diferentes."
     : v === c
       ? "As duas entradas são o mesmo dispositivo. Sem dois canais separados não dá para saber quem falou."
-      : "Pronto. Teste os níveis antes de começar.";
+      : "Pronto. Teste os níveis antes de começar. A energia é medida na thread de áudio, então esta janela pode ficar em segundo plano.";
 }
 document.querySelectorAll(".modo").forEach(b => {
   b.onclick = () => {
@@ -294,15 +305,126 @@ async function abrirCanais() {
   // No push-to-talk ha UMA fonte so: quem rotula e a tecla, nao a energia.
   const fC = modo === "dois" ? await pegar($("devC").value) : null;
 
-  anV = ctx.createAnalyser(); anV.fftSize = 512; anV.smoothingTimeConstant = 0.2;
-  anC = ctx.createAnalyser(); anC.fftSize = 512; anC.smoothingTimeConstant = 0.2;
-  fV.connect(anV); if (fC) fC.connect(anC);
+  // Um AudioContext pode nascer suspenso; suspenso, o worklet nao processa.
+  try { await ctx.resume(); } catch (e) {}
+
+  usandoWorklet = await ligarWorklet(fV, fC);
+  if (!usandoWorklet) ligarAnalisadores(fV, fC);
 
   // Mistura para UM reconhecedor. Nao conecta em ctx.destination:
   // tocar nas caixas criaria eco de volta no microfone.
   dest = ctx.createMediaStreamDestination();
   fV.connect(dest); if (fC) fC.connect(dest);
   return dest.stream.getAudioTracks()[0];
+}
+
+// ==================================================================
+// Janela de amostras de energia + barras de nivel
+// ==================================================================
+// Duas escalas diferentes chegam aqui:
+//   - worklet: RMS de forma de onda (0..1; fala normal fica ~0,01..0,2)
+//   - AnalyserNode: media do espectro em bytes /255
+// Por isso cada caminho tem sua propria conversao para porcentagem de barra.
+//
+// A DECISAO de quem falou (quemFalou) compara os dois canais por RAZAO, entao
+// e imune a escala. O que depende de escala e (a) as barras e (b) o piso de
+// silencio ATRIB.pisoSilencio = 0,0005, calibrado na escala do AnalyserNode.
+// Em RMS de forma de onda 0,0005 e cerca de -66 dBFS, que continua sendo
+// silencio em qualquer sala - e errar para BAIXO aqui e seguro, porque a
+// margem de 1,6 recusa a atribuicao quando os dois canais estao parecidos.
+// Errar para cima mataria fala real. Nao foi medido com microfone de verdade:
+// se voce vir frases sumindo sem motivo, e aqui que se olha primeiro.
+const pctRms = x => Math.max(0, Math.min(100, (20 * Math.log10(Math.max(x, 1e-6)) + 60) / 60 * 100));
+const pctAnalisador = x => Math.min(100, x * 260);
+let pctBarra = pctAnalisador;
+
+function empurrarAmostra(t, eV, eC) {
+  $("medV").style.width = pctBarra(eV) + "%";
+  $("medC").style.width = pctBarra(eC) + "%";
+  janela.push({ t, eV, eC });
+  if (janela.length > 2000) janela = janela.slice(-1200);
+}
+
+// ==================================================================
+// Medida de energia, caminho bom: AudioWorklet
+// ==================================================================
+// process() roda na thread de renderizacao de audio, que o Chrome NAO
+// estrangula com a aba oculta. No modo "duas entradas" isso e a diferenca
+// entre funcionar e nao funcionar: a pagina nem precisa de foco, porque o
+// vendedor esta falando no celular. Detalhes em worklet-energia.js.
+async function ligarWorklet(fV, fC) {
+  if (!ctx.audioWorklet || typeof AudioWorkletNode === "undefined") {
+    semWorklet("este navegador não tem AudioWorklet");
+    return false;
+  }
+  // Tudo num try so: carregar o modulo, criar o no E ligar o grafo. Qualquer
+  // um dos tres pode falhar (404 no arquivo, nome nao registrado, maquina sem
+  // dispositivo de saida) e em todos os casos queremos o fallback, nao uma
+  // excecao subindo para o botao.
+  try {
+    await ctx.audioWorklet.addModule("worklet-energia.js");
+    medidor = new AudioWorkletNode(ctx, "medidor-energia", {
+      numberOfInputs: 2,
+      numberOfOutputs: 1,
+      outputChannelCount: [1],
+      processorOptions: { intervaloMs: AMOSTRA_MS }
+    });
+
+    // Ancora do relogio do contexto -> relogio de parede. ctx.currentTime
+    // anda em passos de bloco e atrasa alguns ms em relacao ao relogio de
+    // audio real, entao a ancora carrega um erro da ordem de dezenas de ms.
+    // Contra os 1000 ms do bug que estamos consertando, e ruido.
+    ancoraCtx = Date.now() - ctx.currentTime * 1000;
+
+    medidor.port.onmessage = ev => {
+      const m = ev.data;
+      empurrarAmostra(ancoraCtx + m.t * 1000, m.eV, m.eC);
+    };
+
+    fV.connect(medidor, 0, 0);          // saida 0 da fonte -> input 0 do medidor
+    if (fC) fC.connect(medidor, 0, 1);  // no push-to-talk o input 1 fica vazio
+
+    // O grafo do Web Audio e puxado pelo destino: um no que nao alcanca o
+    // destination nao tem process() chamado. O processador nao escreve saida
+    // nenhuma (ja sai silencio), e o ganho 0 garante isso de qualquer forma -
+    // nada volta para as caixas, nada vira eco no microfone.
+    ganhoMudo = ctx.createGain();
+    ganhoMudo.gain.value = 0;
+    medidor.connect(ganhoMudo);
+    ganhoMudo.connect(ctx.destination);
+  } catch (e) {
+    if (medidor) { medidor.port.onmessage = null; try { medidor.disconnect(); } catch (x) {} }
+    if (ganhoMudo) { try { ganhoMudo.disconnect(); } catch (x) {} }
+    medidor = null; ganhoMudo = null;
+    semWorklet(e.name + ": " + e.message);
+    return false;
+  }
+
+  pctBarra = pctRms;
+  return true;
+}
+
+// Nunca falhar em silencio. No modo "duas entradas" o fallback e ruim DE
+// VERDADE: a atribuicao depende da energia e a janela costuma estar sem foco.
+function semWorklet(motivo) {
+  usandoWorklet = false;
+  pctBarra = pctAnalisador;
+  const msg = modo === "dois"
+    ? "Sem AudioWorklet (" + motivo + "). Caí na medição por timer, que o Chrome estrangula para ~1 Hz quando a aba perde o foco — MANTENHA ESTA JANELA VISÍVEL E EM FOCO, ou a atribuição por energia vai errar."
+    : "Sem AudioWorklet (" + motivo + "). As barras de nível ficam grosseiras; a atribuição por tecla não é afetada, porque ela não usa timer.";
+  aviso(msg);
+  // A barra de aviso e limpa por limpaAviso() na primeira decisao bem
+  // sucedida. Este texto fica, porque so conferirEscolha() o reescreve.
+  $("ajudaRodar").textContent = msg;
+}
+
+// ==================================================================
+// Medida de energia, fallback: AnalyserNode + setInterval
+// ==================================================================
+function ligarAnalisadores(fV, fC) {
+  anV = ctx.createAnalyser(); anV.fftSize = 512; anV.smoothingTimeConstant = 0.2;
+  anC = ctx.createAnalyser(); anC.fftSize = 512; anC.smoothingTimeConstant = 0.2;
+  fV.connect(anV); if (fC) fC.connect(anC);
 }
 
 function nivel(an) {
@@ -313,16 +435,19 @@ function nivel(an) {
   return Math.sqrt(s / b.length) / 255;
 }
 
-function comecarMedicao(mostrarBarras) {
+function comecarMedicao() {
   clearInterval(timerNivel);
+  timerNivel = null;
+  // Com o worklet nao ha nada a iniciar: ele posta desde que foi conectado.
+  if (usandoWorklet) return;
+  // FALLBACK. Este setInterval E o bug que o worklet contorna: com a aba
+  // oculta ou sem foco o Chrome o estrangula para ~1 Hz. Medido nesta
+  // maquina, com AMOSTRA_MS = 50: intervalos de 999/1001/1000/1008/991 ms,
+  // ou seja 1,1 Hz em vez de 20 Hz - uma frase de 2 s rende 2 amostras em
+  // vez de 40. Nao "simplifique" o worklet para ca. semWorklet() ja avisou
+  // o usuario na tela de que caimos neste caminho.
   timerNivel = setInterval(() => {
-    const eV = nivel(anV), eC = modo === "dois" ? nivel(anC) : 0;
-    if (mostrarBarras) {
-      $("medV").style.width = Math.min(100, eV * 260) + "%";
-      $("medC").style.width = Math.min(100, eC * 260) + "%";
-    }
-    janela.push({ t: Date.now(), eV, eC, tecla: teclaApertada });
-    if (janela.length > 2000) janela = janela.slice(-1200);
+    empurrarAmostra(Date.now(), nivel(anV), modo === "dois" ? nivel(anC) : 0);
   }, AMOSTRA_MS);
 }
 
@@ -338,13 +463,32 @@ $("btTestar").onclick = async () => {
     aviso("Não consegui abrir as entradas: " + e.name + " — " + e.message);
     return;
   }
-  comecarMedicao(true);
-  aviso("Testando. Fale você, depois deixe o cliente falar, e veja qual barra sobe.", true);
-  setTimeout(() => { pararAudio(); $("medV").style.width = 0; $("medC").style.width = 0; limpaAviso(); }, 15000);
+  comecarMedicao();
+  if (usandoWorklet) aviso("Testando. Fale você, depois deixe o cliente falar, e veja qual barra sobe.", true);
+  // Se caimos no fallback, semWorklet() deixou um aviso na tela; ele vale
+  // mais do que limpar a barra de aviso no fim do teste.
+  const tinhaWorklet = usandoWorklet;
+  setTimeout(() => {
+    pararAudio();
+    $("medV").style.width = 0; $("medC").style.width = 0;
+    if (tinhaWorklet) limpaAviso();
+  }, 15000);
 };
 
 function pararAudio() {
   clearInterval(timerNivel);
+  timerNivel = null;
+  if (medidor) {
+    // Mata o processador na thread de audio e corta o grafo. Sem isto ele
+    // seguiria postando amostras para uma janela que ninguem mais le.
+    try { medidor.port.postMessage("parar"); } catch (e) {}
+    medidor.port.onmessage = null;
+    try { medidor.disconnect(); } catch (e) {}
+    medidor = null;
+  }
+  if (ganhoMudo) { try { ganhoMudo.disconnect(); } catch (e) {} ganhoMudo = null; }
+  usandoWorklet = false;
+  anV = anC = null;
   streams.forEach(s => s.getTracks().forEach(t => t.stop()));
   streams = [];
   if (ctx) { ctx.close().catch(() => {}); ctx = null; }
@@ -367,8 +511,10 @@ function criarReconhecedor(track) {
       const texto = ev.results[i][0].transcript.trim();
       if (!texto) continue;
       const de = tUltimoFinal || agora - 6000;
+      // Push-to-talk decide pelas TRANSICOES da tecla (exato, sem timer);
+      // duas entradas decidem pela energia amostrada no AudioWorklet.
       const quem = modo === "tecla"
-        ? quemFalouPorTecla(janela, de, agora)
+        ? quemFalouPorTransicoes(transicoes, de, agora)
         : quemFalou(janela, de, agora);
       tUltimoFinal = agora;
       if (!quem) continue;   // sobreposicao: nao da para atribuir com honestidade
@@ -485,6 +631,32 @@ function rodape() {
 // O reconhecedor NAO para nem comeca junto com a tecla: start -> audiostart
 // leva ~208ms e comeria o inicio de cada frase. Ele roda continuo e a tecla
 // so rotula, pela janela de tempo em que a frase aconteceu.
+//
+// GUARDAMOS TRANSICOES, NAO AMOSTRAS. Dois motivos, nesta ordem:
+//
+//  1. A versao anterior amostrava `teclaApertada` num setInterval de 50 ms,
+//     junto com a energia. O Chrome estrangula setInterval para ~1 Hz quando
+//     a aba esta oculta ou sem foco - medido nesta maquina: intervalos de
+//     999/1001/1000/1008/991 ms. Uma frase de 2 s rendia 2 amostras em vez
+//     de 40, e a fracao que decide quem falou virava um chute de resolucao
+//     50%. keydown/keyup nao sao timers: eles chegam quando acontecem.
+//
+//  2. e.timeStamp diz quando a tecla foi FISICAMENTE acionada, nao quando o
+//     handler rodou. Com a thread principal ocupada (fetch do Jev, montagem
+//     do card) o handler atrasa dezenas de ms; o timestamp do evento nao.
+//
+// A integracao da fracao esta em lib/atribuir.js (quemFalouPorTransicoes).
+// Nao troque isto por amostragem periodica "para simplificar": o bug volta.
+function registrarTransicao(apertado, ts) {
+  transicoes.push({ t: paraRelogio(ts), apertado: apertado });
+  // Teto para nao crescer sem fim numa call longa. Podamos guardando uma
+  // transicao a MAIS do que a janela util precisa: a mais antiga que sobra
+  // funciona como semente do estado para janelas que comecem antes dela.
+  // Esvaziar a lista aqui faria o estado voltar ao default (solta) no meio
+  // de um aperto - e a frase seria rotulada como do cliente.
+  if (transicoes.length > 400) transicoes = transicoes.slice(-201);
+}
+
 function pintarPtt() {
   $("ptt").classList.toggle("falando", teclaApertada);
   $("pttTxt").textContent = teclaApertada ? "Você está falando" : "Solto — ouvindo o cliente";
@@ -494,15 +666,28 @@ document.addEventListener("keydown", e => {
   if (e.code !== "Space" || modo !== "tecla" || e.repeat) return;
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
   e.preventDefault();               // senao o espaco rola a pagina
-  teclaApertada = true; pintarPtt();
+  if (teclaApertada) return;        // ja contabilizada (auto-repeat, teclado duplo)
+  teclaApertada = true;
+  registrarTransicao(true, e.timeStamp);
+  pintarPtt();
 });
 document.addEventListener("keyup", e => {
   if (e.code !== "Space" || modo !== "tecla") return;
   e.preventDefault();
-  teclaApertada = false; pintarPtt();
+  if (!teclaApertada) return;       // keyup sem keydown correspondente
+  teclaApertada = false;
+  registrarTransicao(false, e.timeStamp);
+  pintarPtt();
 });
-// Perder o foco com a tecla presa deixaria tudo rotulado como voce.
-window.addEventListener("blur", () => { if (teclaApertada) { teclaApertada = false; pintarPtt(); } });
+// Perder o foco com a tecla presa deixaria tudo rotulado como voce: o keyup
+// nem chega quando a janela perde o foco no meio do aperto. Aqui nao ha
+// e.timeStamp util, entao o instante do proprio blur e o melhor que temos.
+window.addEventListener("blur", () => {
+  if (!teclaApertada) return;
+  teclaApertada = false;
+  registrarTransicao(false, performance.now());
+  pintarPtt();
+});
 
 // ==================================================================
 // Começar / parar
@@ -519,7 +704,11 @@ $("bt").onclick = async () => {
   catch (e) { aviso("Não consegui abrir as entradas: " + e.name + " — " + e.message); return; }
 
   janela = []; tUltimoFinal = 0;
-  comecarMedicao(true);
+  // Semeia as transicoes com o estado conhecido AGORA. Sem a semente, uma
+  // janela de frase que comece antes do primeiro keydown cairia no default
+  // (solta): por sorte e o mesmo valor, mas depender de sorte aqui e ruim.
+  transicoes = [{ t: Date.now(), apertado: teclaApertada }];
+  comecarMedicao();
   rec = criarReconhecedor(track);
   ouvindo = true;
   try { rec.start(track); }

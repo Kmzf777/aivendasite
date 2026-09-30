@@ -13,6 +13,13 @@ const CONFIG = {
 
   limiarObjecao: 0.6,   // noul de tem_objecao para considerar que há objeção
   limiarConfianca: 0.5, // confidence da choice para mostrar o card com argumento
+
+  // A segunda porta. Confiança que dispensa o tem_objecao, para quando o
+  // cliente não está objetando e sim RESPONDENDO ("é o Vicente", "uso mais o
+  // Instagram"): ali o tem_objecao fica baixo de propósito e a escolha vem
+  // certíssima. Medido em medicao/RESULTADOS.md. Apertado por segurança:
+  // "pode mandar no WhatsApp" casa com vou_pensar a 0.90 e NÃO pode disparar.
+  limiarConfiancaSozinha: 0.95,
   limiarTerminou: 0.5,  // abaixo disso a frase está cortada: espera o resto
   limiarFase: 0.5,      // confidence mínima para mover a barra de fase
 
@@ -118,17 +125,29 @@ function aplicarRegra(respostaJev, objecoes, ultimaMostrada) {
 
   const base = { fase, temObjecao, confianca, escolha };
 
-  if (temObjecao < CONFIG.limiarObjecao) return Object.assign({ acao: "nada" }, base);
-
-  // Há objeção. Se a frase está cortada, o texto ainda vai mudar: espera.
-  // Essa checagem vem DEPOIS de tem_objecao para que a barra de fase e o
-  // "nada" não fiquem presos atrás de uma frase incompleta.
+  // Frase cortada é frase cortada, tenha ou não objeção aparente: o texto ainda
+  // vai mudar e decidir agora é decidir sobre um pedaço. Vem ANTES do portão
+  // porque o Jev acerta o corte mesmo quando a frase ainda não parece objeção
+  // (medido: fim=0.09 com obj=0.41), e em viva-voz, onde o ASR corta mais, esse
+  // é o caso comum. `base` vai junto, então a barra de fase não congela.
   if (terminou < CONFIG.limiarTerminou) return Object.assign({ acao: "esperar" }, base);
 
   const doCatalogo = (objecoes || []).find(o => o.id === escolha);
+  const temCandidato = escolha !== "nenhuma" && !!doCatalogo;
 
-  if (escolha === "nenhuma" || confianca < CONFIG.limiarConfianca || !doCatalogo) {
-    return Object.assign({ acao: "alerta" }, base);
+  // Duas portas, não uma. A da esquerda é a de sempre: o cliente empurrou de
+  // volta. A da direita é para quando ele respondeu em vez de objetar — ali o
+  // tem_objecao fica baixo e só a confiança da escolha sustenta o card.
+  // Em 8 dos 11 erros da regra antiga era exatamente isso (RESULTADOS.md).
+  const passou = temCandidato && (
+    (temObjecao >= CONFIG.limiarObjecao && confianca >= CONFIG.limiarConfianca) ||
+    (confianca >= CONFIG.limiarConfiancaSozinha)
+  );
+
+  if (!passou) {
+    // Empurrou de volta mas nenhum id casou com confiança: card neutro.
+    if (temObjecao >= CONFIG.limiarObjecao) return Object.assign({ acao: "alerta" }, base);
+    return Object.assign({ acao: "nada" }, base);
   }
 
   if (escolha === ultimaMostrada) return Object.assign({ acao: "repetida" }, base);
