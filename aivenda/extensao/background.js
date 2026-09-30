@@ -1,56 +1,110 @@
-// Tarefa 1: so prova que o service worker alcanca o localhost.
+// Service worker: recebe a fala do content script, decide com o Jev e
+// distribui a decisao para o overlay e para o painel separado.
 //
-// Por que isso precisa ser provado antes de qualquer outra coisa: o content
-// script roda em https://meet.google.com, e chamar http://localhost de la e
-// mixed content, que o Chrome bloqueia EM SILENCIO (o fetch pendura ate dar
-// timeout). A aposta do design v2 e que o service worker, com host_permissions
-// explicito, nao sofre essa regra. Se a aposta estiver errada, o plano B e
-// chamar a api.typesafe.ai direto daqui.
+// A chamada sai DAQUI e nao do content script: o content script roda em
+// https://meet.google.com, e chamar http://localhost de la e mixed content,
+// que o Chrome bloqueia EM SILENCIO (o fetch pendura ate dar timeout).
+// Verificado na Tarefa 1: o service worker com host_permissions alcanca.
 
-async function diagnostico(origem) {
-  const r = { origem, quando: new Date().toISOString() };
-  const t0 = Date.now();
+importScripts("lib/decisao.js", "lib/objecoes-exemplo.js");
+
+const SERVIDOR = "http://localhost:3000";
+
+let objecoes = OBJECOES_EXEMPLO;
+let falas = [];
+let ultimaMostrada = null;
+let seq = 0;
+
+// ==================================================================
+// Catalogo (fonte de verdade no servidor, para as duas telas verem o mesmo)
+// ==================================================================
+async function carregarObjecoes() {
   try {
-    const resp = await fetch("http://localhost:3000/jev", {
+    const r = await fetch(SERVIDOR + "/objecoes");
+    const lista = await r.json();
+    if (Array.isArray(lista) && lista.length) {
+      objecoes = lista;
+      console.log("[COPILOTO] catalogo:", objecoes.length, "objecoes");
+    }
+  } catch (e) {
+    console.log("[COPILOTO] servidor fora, usando as 7 de exemplo:", e.message);
+  }
+}
+carregarObjecoes();
+chrome.runtime.onInstalled.addListener(carregarObjecoes);
+chrome.runtime.onStartup.addListener(carregarObjecoes);
+
+// ==================================================================
+// Publicar para o painel separado
+// ==================================================================
+async function publicar(evento) {
+  try {
+    await fetch(SERVIDOR + "/evento", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(evento)
+    });
+  } catch (e) { /* painel offline: o overlay continua funcionando */ }
+}
+
+// ==================================================================
+// Decisao
+// ==================================================================
+async function decidir(linha, tabId) {
+  falas.push({ quem: linha.quem, fala: linha.texto });
+  if (falas.length > 40) falas = falas.slice(-40);
+
+  publicar({ tipo: "fala", quem: linha.quem, nome: linha.nome, texto: linha.texto });
+
+  // So a fala do cliente decide. A sua serve de contexto.
+  if (linha.quem !== "cliente") return;
+
+  const meu = ++seq;
+  const t0 = Date.now();
+  let json;
+  try {
+    const r = await fetch(SERVIDOR + "/jev", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "jev-1.13.0",
-        state: "Esse valor ta fora do meu orcamento.",
-        questions: {
-          tem_objecao: {
-            type: "noul",
-            instructions: "Is the customer objecting?",
-            criteria: { true: "Yes", false: "No" }
-          }
-        }
+        model: CONFIG.modelo,
+        state: montarState(falas, linha.texto),
+        questions: montarPerguntas(objecoes)
       })
     });
-    const j = await resp.json();
-    r.ok = resp.ok;
-    r.status = resp.status;
-    r.noul = j && j.answers && j.answers.tem_objecao && j.answers.tem_objecao.noul;
-    r.ms = Date.now() - t0;
+    json = await r.json();
+    if (!r.ok) throw new Error(json.error || ("HTTP " + r.status));
   } catch (e) {
-    r.ok = false;
-    r.erro = e.name + ": " + e.message;
-    r.ms = Date.now() - t0;
+    console.error("[COPILOTO] falha no Jev:", e.message);
+    publicar({ tipo: "erro", mensagem: "Falha ao falar com o Jev: " + e.message });
+    return;
   }
+  const ms = Date.now() - t0;
 
-  console.log("=".repeat(56));
-  console.log("[COPILOTO] DIAGNOSTICO localhost:", JSON.stringify(r, null, 1));
-  console.log(r.ok
-    ? "[COPILOTO] ALCANCA O LOCALHOST. Pode seguir para a Tarefa 2."
-    : "[COPILOTO] NAO ALCANCA. Ver plano B na Tarefa 1 Step 6 do plano.");
-  console.log("=".repeat(56));
+  // Chegou fala mais nova enquanto esta chamada estava no ar: descarta.
+  if (meu < seq) return;
 
-  await chrome.storage.local.set({ diagnostico: r });
-  return r;
+  const d = aplicarRegra(json, objecoes, ultimaMostrada);
+  if (d.acao === "card") ultimaMostrada = d.escolha;
+
+  const evento = {
+    tipo: "decisao",
+    acao: d.acao, fase: d.fase, confianca: d.confianca, temObjecao: d.temObjecao,
+    escolha: d.escolha, objecao: d.objecao || null,
+    falaCliente: linha.texto, ms, custo: calcularCusto(json.usage)
+  };
+
+  console.log("[COPILOTO]", d.acao, d.escolha, "conf", d.confianca, ms + "ms");
+  publicar(evento);
+  if (tabId != null) chrome.tabs.sendMessage(tabId, evento).catch(() => {});
 }
 
-chrome.runtime.onInstalled.addListener(() => diagnostico("onInstalled"));
-chrome.runtime.onStartup.addListener(() => diagnostico("onStartup"));
-
-// Permite reexecutar sob demanda pelo DevTools do service worker:
-//   await diagnostico("manual")
-self.diagnostico = diagnostico;
+// ==================================================================
+// Mensagens do content script e da pagina de opcoes
+// ==================================================================
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (!msg) return;
+  if (msg.tipo === "linha") decidir(msg, sender.tab && sender.tab.id);
+  if (msg.tipo === "recarregar-objecoes") carregarObjecoes();
+  if (msg.tipo === "zerar") { falas = []; ultimaMostrada = null; seq = 0; }
+});
