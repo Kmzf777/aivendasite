@@ -60,14 +60,6 @@
   .vazio { margin: auto; text-align: center; color: var(--fraquinho); max-width: 340px; }
   .vazio .grande { font-size: 15px; color: var(--fraco); margin-bottom: 10px; }
 
-  #btComecar {
-    display: block; margin: auto; background: var(--destaque); color: #04121f;
-    border: 0; border-radius: 12px; padding: 20px 44px;
-    font: inherit; font-size: 19px; font-weight: 650; cursor: pointer;
-    transition: transform .12s, background .2s;
-  }
-  #btComecar:hover { transform: translateY(-1px); }
-  #btComecar.ativo { background: var(--painel); color: var(--erro); border: 1px solid var(--erro); }
 
   #palco { flex: 1; display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
 
@@ -145,7 +137,10 @@
 
     <section class="centro">
       <div id="palco">
-        <button id="btComecar">Começar a ouvir</button>
+        <div class="vazio">
+          <div class="grande">Aguardando a call.</div>
+          Entre no Meet com a extensão ativa. O card aparece aqui e no overlay.
+        </div>
       </div>
       <div id="historico" hidden><h3>Objeções nesta call</h3><ol id="listaHist"></ol></div>
     </section>
@@ -180,39 +175,43 @@
 
 <script src="lib/decisao.js"></script>
 <script src="lib/objecoes-exemplo.js"></script>
-<script src="audio.js"></script>
 <script>
 // ==================================================================
 // Estado
 // ==================================================================
-const CHAVE_LS = "aivenda.objecoes.v1";
+// Este painel NÃO decide nada. A extensão lê as legendas do Meet, o service
+// worker chama o Jev, e aqui só exibimos o que chega por SSE. Assim a decisão
+// acontece num lugar só e o overlay e este painel nunca divergem.
 
-let objecoes = carregarObjecoes();
-let falas = [];              // histórico para o state do Jev
-let ultimaMostrada = null;   // não repetir o mesmo card seguido
-let trilhaVoce = null, trilhaCliente = null, disparador = null, streamAba = null;
-let ouvindo = false;
+let objecoes = JSON.parse(JSON.stringify(OBJECOES_EXEMPLO));
 let latencias = [], decisoes = 0, custoTotal = 0;
 
 const $ = id => document.getElementById(id);
 
 // ==================================================================
-// Catálogo (localStorage)
+// Catálogo (no servidor, compartilhado com a extensão)
 // ==================================================================
-function carregarObjecoes() {
+async function carregarObjecoes() {
   try {
-    const salvo = localStorage.getItem(CHAVE_LS);
-    if (salvo) {
-      const lista = JSON.parse(salvo);
-      if (Array.isArray(lista)) return lista;
-    }
-  } catch (e) { /* localStorage bloqueado ou JSON corrompido: cai no exemplo */ }
+    const r = await fetch("/objecoes");
+    const lista = await r.json();
+    if (Array.isArray(lista) && lista.length) return lista;
+  } catch (e) { /* servidor fora: fica com os exemplos */ }
   return JSON.parse(JSON.stringify(OBJECOES_EXEMPLO));
 }
 
-function salvarObjecoes() {
-  try { localStorage.setItem(CHAVE_LS, JSON.stringify(objecoes)); }
-  catch (e) { mostrarAviso("Não consegui salvar no navegador. Suas edições valem só nesta aba."); }
+async function salvarObjecoes() {
+  try {
+    const r = await fetch("/objecoes", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(objecoes)
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    limparAviso();
+  } catch (e) {
+    mostrarAviso("Não consegui salvar no servidor: " + e.message);
+  }
 }
 
 function idDe(nome) {
@@ -357,59 +356,52 @@ function mostrarAviso(msg) {
 function limparAviso() { $("aviso").classList.remove("ver"); }
 
 // ==================================================================
-// Decisão
+// Recebe do servidor (SSE)
 // ==================================================================
-async function decidir(textoCliente, seq) {
-  const corpo = {
-    model: CONFIG.modelo,
-    state: montarState(falas, textoCliente),
-    questions: montarPerguntas(objecoes)
-  };
+// O painel não decide nada: a extensão lê as legendas, o service worker
+// decide, e aqui só exibimos. Uma decisão, duas telas, zero divergência.
+const fonte = new EventSource('/eventos');
 
-  const inicio = performance.now();
-  let json;
-  try {
-    const resp = await fetch("/jev", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(corpo)
-    });
-    json = await resp.json();
-    if (!resp.ok) { mostrarAviso("O Jev respondeu " + resp.status + ": " + (json.error || "erro")); return; }
-  } catch (e) {
-    mostrarAviso("Não consegui falar com o servidor: " + e.message);
+fonte.onopen = () => {
+  limparAviso();
+  luz('voce', 'ouvindo');
+  luz('cliente', 'ouvindo');
+};
+
+fonte.onerror = () => {
+  mostrarAviso('Perdi a conexão com o servidor. Reconectando…');
+  luz('voce', 'parada');
+  luz('cliente', 'parada');
+};
+
+fonte.onmessage = ev => {
+  let m;
+  try { m = JSON.parse(ev.data); } catch (e) { return; }
+
+  if (m.tipo === 'fala') {
+    escreverFala(m.quem === 'vendedor' ? 'voce' : 'cliente', m.texto, false);
     return;
   }
-  const ms = Math.round(performance.now() - inicio);
 
-  // Chegou fala mais nova enquanto esta chamada estava no ar: descarta.
-  // É o número de sequência que garante a ordem, não a ordem das respostas.
-  if (seq < disparador.seqAtual()) return;
+  if (m.tipo === 'objecoes') { objecoes = m.lista; desenharObjecoes(); return; }
 
-  limparAviso();
-  latencias.push(ms);
-  decisoes++;
-  custoTotal += calcularCusto(json.usage);
-  atualizarRodape();
+  if (m.tipo === 'erro') { mostrarAviso(m.mensagem); return; }
 
-  const d = aplicarRegra(json, objecoes, ultimaMostrada);
-  if (d.fase) desenharFases(d.fase);
+  if (m.tipo === 'decisao') {
+    latencias.push(m.ms);
+    decisoes++;
+    custoTotal += m.custo || 0;
+    atualizarRodape();
+    if (m.fase) desenharFases(m.fase);
 
-  if (d.acao === "card") {
-    ultimaMostrada = d.escolha;
-    disparador.limpar();
-    mostrarCard(d, ms);
-    somarHistorico(d.objecao.nome);
-  } else if (d.acao === "alerta") {
-    disparador.limpar();
-    mostrarAlerta(textoCliente, d, ms);
-  } else if (d.acao === "nada" || d.acao === "repetida") {
-    // Frase resolvida, sem card. Começa a próxima do zero.
-    disparador.limpar();
+    if (m.acao === 'card' && m.objecao) {
+      mostrarCard({ objecao: m.objecao, confianca: m.confianca }, m.ms);
+      somarHistorico(m.objecao.nome);
+    } else if (m.acao === 'alerta') {
+      mostrarAlerta(m.falaCliente, { temObjecao: m.temObjecao }, m.ms);
+    }
   }
-  // "esperar": não limpa — o resto da frase ainda vem.
-}
-
+};
 function mostrarCard(d, ms) {
   $("palco").innerHTML =
     '<div id="card"><div class="card-topo">Quebrar objeção</div>' +
@@ -450,98 +442,15 @@ function atualizarRodape() {
 }
 
 // ==================================================================
-// Começar / parar
-// ==================================================================
-async function comecar() {
-  limparAviso();
-
-  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-    mostrarAviso("Este navegador não tem a Web Speech API. Use o Chrome 139 ou mais novo.");
-    return;
-  }
-  if (!objecoes.length) {
-    mostrarAviso("Cadastre pelo menos uma objeção na aba 'Minhas objeções' antes de começar.");
-    return;
-  }
-  // Sem esta checagem, a coluna "Cliente" viraria um espelho secreto do
-  // seu microfone e você não perceberia. Melhor não começar.
-  if (!suportaAudioTrack()) {
-    mostrarAviso("Este Chrome não suporta ouvir a aba separada do microfone (precisa do Chrome 139+). Sem isso as duas colunas ouviriam o seu microfone, então não vou começar.");
-    return;
-  }
-
-  let audio;
-  try {
-    audio = await pegarAudioDaAba();
-  } catch (e) {
-    mostrarAviso(e.name === "NotAllowedError" ? "Você cancelou o compartilhamento da aba." : e.message);
-    return;
-  }
-  streamAba = audio.stream;
-
-  disparador = criarDisparador({
-    pausaMs: CONFIG.pausaParcialMs,
-    onDisparo: (texto, seq) => decidir(texto, seq)
-  });
-
-  trilhaVoce = criarTrilha({
-    nome: "voce", track: null,
-    onParcial: t => escreverFala("voce", t, true),
-    onFinal: t => { escreverFala("voce", t, false); falas.push({ quem: "vendedor", fala: t }); },
-    onEstado: (estado, extra) => {
-      luz("voce", estado);
-      if (estado === "negado") mostrarAviso("Permissão de microfone negada. A coluna 'Você' não vai transcrever.");
-    }
-  });
-
-  trilhaCliente = criarTrilha({
-    nome: "cliente", track: audio.track,
-    onParcial: t => { escreverFala("cliente", t, true); disparador.parcial(t); },
-    onFinal: t => {
-      escreverFala("cliente", t, false);
-      falas.push({ quem: "cliente", fala: t });
-      disparador.final(t);
-    },
-    onEstado: estado => luz("cliente", estado)
-  });
-
-  // A aba pode ser fechada ou o compartilhamento cortado pelo botão do Chrome.
-  audio.track.onended = () => { if (ouvindo) { mostrarAviso("O compartilhamento da aba terminou."); parar(); } };
-
-  trilhaVoce.comecar();
-  trilhaCliente.comecar();
-  ouvindo = true;
-
-  $("btComecar").textContent = "Parar";
-  $("btComecar").classList.add("ativo");
-  $("palco").innerHTML = '';
-  $("palco").appendChild($("btComecar"));
-  const vazio = document.createElement("div");
-  vazio.className = "vazio";
-  vazio.innerHTML = '<div class="grande">Ouvindo as duas trilhas.</div>O card aparece aqui quando o cliente objetar.';
-  $("palco").appendChild(vazio);
-}
-
-function parar() {
-  ouvindo = false;
-  if (trilhaVoce) trilhaVoce.parar();
-  if (trilhaCliente) trilhaCliente.parar();
-  if (disparador) disparador.zerar();
-  if (streamAba) { streamAba.getTracks().forEach(t => t.stop()); streamAba = null; }
-  luz("voce", "parada"); luz("cliente", "parada");
-  $("btComecar").textContent = "Começar a ouvir";
-  $("btComecar").classList.remove("ativo");
-}
-
-$("btComecar").onclick = () => { ouvindo ? parar() : comecar(); };
-
-// ==================================================================
 // Início
 // ==================================================================
-desenharFases(null);
-desenharObjecoes();
-atualizarRodape();
-$("mModelo").textContent = CONFIG.modelo;
+(async () => {
+  objecoes = await carregarObjecoes();
+  desenharFases(null);
+  desenharObjecoes();
+  atualizarRodape();
+  $("mModelo").textContent = CONFIG.modelo;
+})();
 </script>
 </body>
 </html>

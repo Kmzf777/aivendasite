@@ -1,9 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "Copiloto de Call (diagnostico)",
-  "version": "0.1.0",
-  "description": "Teste de alcance ao servidor local.",
+  "name": "Copiloto de Call",
+  "version": "0.2.0",
+  "description": "Le as legendas do Google Meet e mostra o argumento da objecao em tempo real, decidido pelo Jev.",
   "permissions": ["storage"],
   "host_permissions": ["http://localhost:3000/*"],
-  "background": { "service_worker": "background.js" }
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{
+    "matches": ["https://meet.google.com/*"],
+    "js": ["content.js"],
+    "css": ["overlay.css"],
+    "run_at": "document_idle"
+  }],
+  "options_page": "opcoes.html"
 }
