@@ -36,6 +36,37 @@ function quemFalou(amostras, de, ate, cfg) {
   return null;   // falaram por cima um do outro
 }
 
+// ------------------------------------------------------------------
+// Push-to-talk: o rotulo nao e inferido, e declarado.
+//
+// Voce segura uma tecla enquanto fala. O reconhecedor NAO para nem
+// comeca junto com a tecla (start -> audiostart leva ~208ms, comeria o
+// inicio de cada frase): ele roda continuo, e a tecla so rotula o texto
+// que sai, pela janela de tempo em que a frase aconteceu.
+//
+// Funciona com qualquer fonte de audio - viva-voz, presencial, o que for.
+// O preco e disciplina: esquecer de segurar rotula sua fala como cliente.
+// ------------------------------------------------------------------
+const TECLA = {
+  // Acima disso a frase e sua; abaixo do piso, e do cliente.
+  // Entre os dois preferimos nao atribuir a chutar.
+  limiarSeu: 0.6,
+  limiarCliente: 0.25
+};
+
+// amostras: [{ t, tecla: bool }] amostradas periodicamente
+// Devolve "vendedor" | "cliente" | null
+function quemFalouPorTecla(amostras, de, ate, cfg) {
+  const c = Object.assign({}, TECLA, cfg || {});
+  const jan = (amostras || []).filter(x => x.t >= de && x.t <= ate);
+  if (!jan.length) return null;
+
+  const fracao = jan.filter(x => x.tecla).length / jan.length;
+  if (fracao >= c.limiarSeu) return "vendedor";
+  if (fracao <= c.limiarCliente) return "cliente";
+  return null;   // a tecla mudou no meio da frase: nao da para separar com honestidade
+}
+
 // Diagnostico para a tela: o quanto um canal dominou o outro.
 function dominancia(amostras, de, ate) {
   const jan = (amostras || []).filter(x => x.t >= de && x.t <= ate);
@@ -48,5 +79,5 @@ function dominancia(amostras, de, ate) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { ATRIB, quemFalou, dominancia };
+  module.exports = { ATRIB, TECLA, quemFalou, quemFalouPorTecla, dominancia };
 }
