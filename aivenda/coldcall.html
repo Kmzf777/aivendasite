@@ -63,6 +63,7 @@
   .falas { flex:1; overflow-y:auto; font-size:13px; }
   .falas p { margin-bottom:7px; color:var(--fraco); }
   .falas p.nova { color:var(--txt); }
+  .falas p.parcial { color:var(--fraquinho); font-style:italic; }
 
   #palco { flex:1; display:flex; flex-direction:column; justify-content:center; overflow-y:auto; }
   .vazio { text-align:center; color:var(--fraquinho); font-size:14px; }
@@ -98,6 +99,22 @@
   .ptt kbd { margin-left:auto; font:inherit; font-size:11px; background:var(--bg); border:1px solid var(--linha);
     border-radius:5px; padding:2px 8px; color:var(--fraquinho); font-weight:600; }
   .ptt.oculto { display:none; }
+
+  .prompt { border-radius:12px; padding:16px 20px; margin-bottom:14px; flex-shrink:0;
+    border:2px solid var(--linha); background:var(--painel); transition:border-color .12s, background .12s; }
+  .prompt.oculto { display:none; }
+  .prompt.seu { border-color:var(--voce); background:#101a33; }
+  .prompt.dele { border-color:var(--cliente); background:#2a1206; }
+  .prompt-topo { display:flex; align-items:center; font-size:11px; text-transform:uppercase;
+    letter-spacing:.11em; font-weight:700; margin-bottom:9px; }
+  .prompt.seu .prompt-topo { color:var(--voce); }
+  .prompt.dele .prompt-topo { color:var(--cliente); }
+  .prompt-conta { margin-left:auto; color:var(--fraquinho); font-weight:600; letter-spacing:.04em; }
+  .prompt-fala { font-size:23px; line-height:1.35; font-weight:600; color:var(--txt); }
+  .prompt-pe { margin-top:11px; font-size:11px; color:var(--fraquinho); }
+  .prompt-pe kbd { background:var(--bg); border:1px solid var(--linha); border-radius:4px;
+    padding:1px 6px; font:inherit; font-size:11px; font-weight:600; }
+  .prompt-fim { font-size:17px; font-weight:650; color:var(--ok); }
 </style>
 </head>
 <body>
@@ -134,6 +151,7 @@
       <div class="medidor c"><i id="medC"></i></div>
 
       <button class="sec" id="btTestar">Testar níveis</button>
+      <button class="sec" id="btRoteiro" style="margin-top:6px">Roteiro de teste</button>
       <p class="ajuda" id="ajudaNiveis">
         Fale: só a barra <b>azul</b> deve subir. Peça para o cliente falar: só a
         <b>laranja</b>. Se as duas subirem juntas, há vazamento — use fone.
@@ -167,6 +185,17 @@
       <div class="col c"><h3><i class="luz" id="luzC"></i>Cliente</h3><div class="falas" id="falasC"></div></div>
     </div>
     <div id="ptt" class="ptt"><span class="ptt-luz"></span><span id="pttTxt">Solto — ouvindo o cliente</span><kbd>espaço</kbd></div>
+    <div id="prompt" class="prompt oculto">
+      <div class="prompt-topo">
+        <span id="promptQuem">—</span>
+        <span class="prompt-conta" id="promptConta"></span>
+      </div>
+      <div class="prompt-fala" id="promptFala"></div>
+      <div class="prompt-pe">
+        <kbd>→</kbd> ou <kbd>Enter</kbd> avança · <kbd>←</kbd> volta · <kbd>Esc</kbd> fecha
+      </div>
+    </div>
+
     <div id="palco"><div class="vazio">O card aparece aqui quando o cliente objetar.</div></div>
   </section>
 </main>
@@ -209,6 +238,28 @@ let ctx, anV, anC, dest, streams = [], rec = null, timerNivel = null;
 let medidor = null, ganhoMudo = null, usandoWorklet = false, ancoraCtx = 0;
 let ouvindo = false, falas = [], ultimaMostrada = null, seq = 0;
 let janela = [], tUltimoFinal = 0;
+
+// ------------------------------------------------------------------
+// Disparo com texto parcial.
+//
+// O Chrome so marca isFinal depois de detectar FIM DE FALA, o que exige
+// pausa. Numa fala longa e sem pausa o final nunca chega - e antes disto
+// o onresult descartava todo parcial, entao uma objecao dita no meio de
+// uma frase comprida nunca virava card. Foi o que apareceu no primeiro
+// teste ao vivo.
+//
+// Medido: o Jev NAO atrapalha aqui. Assim que a objecao e dita, o
+// terminou_de_falar sobe sozinho (0.11 antes de "ta caro", 0.85 depois)
+// e a regra libera o card mesmo com mais palavras vindo atras. Entao o
+// conserto e so decidir quando perguntar.
+// ------------------------------------------------------------------
+const PARCIAL = {
+  pausaMs: 700,        // silencio curto: a frase provavelmente acabou
+  tetoMs: 1800,        // falando sem parar, pergunta assim mesmo a cada tanto
+  minCrescimento: 10   // so repergunta se apareceu texto novo que valha
+};
+let parcialAtual = "", timerParcial = null, ultimoDisparo = 0;
+let textoDecidido = "", tInicioFrase = 0;
 let modo = "tecla";        // "tecla" = push-to-talk | "dois" = duas entradas
 let teclaApertada = false;
 // Transicoes da tecla: [{t, apertado}], uma entrada por keydown/keyup, em
@@ -506,19 +557,37 @@ function criarReconhecedor(track) {
 
   r.onresult = ev => {
     const agora = Date.now();
+    if (!tInicioFrase) tInicioFrase = agora;
+
+    let parcial = "";
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
-      if (!ev.results[i].isFinal) continue;
       const texto = ev.results[i][0].transcript.trim();
       if (!texto) continue;
-      const de = tUltimoFinal || agora - 6000;
-      // Push-to-talk decide pelas TRANSICOES da tecla (exato, sem timer);
-      // duas entradas decidem pela energia amostrada no AudioWorklet.
-      const quem = modo === "tecla"
-        ? quemFalouPorTransicoes(transicoes, de, agora)
-        : quemFalou(janela, de, agora);
-      tUltimoFinal = agora;
-      if (!quem) continue;   // sobreposicao: nao da para atribuir com honestidade
-      registrar(quem, texto);
+
+      if (ev.results[i].isFinal) {
+        clearTimeout(timerParcial);
+        const quem = quemFalouNaJanela(agora);
+        tUltimoFinal = agora;
+        zerarFrase();
+        if (quem) registrar(quem, texto);
+      } else {
+        parcial += texto + " ";
+      }
+    }
+
+    parcial = parcial.trim();
+    if (!parcial) return;
+    parcialAtual = parcial;
+    mostrarParcial(parcial, agora);
+
+    // Duas razoes para perguntar antes do final:
+    // teto  -> esta falando sem parar, o final pode nao vir tao cedo;
+    // pausa -> parou de sair texto novo, a frase provavelmente acabou.
+    if (agora - ultimoDisparo >= PARCIAL.tetoMs) {
+      dispararParcial(parcial, agora);
+    } else {
+      clearTimeout(timerParcial);
+      timerParcial = setTimeout(() => dispararParcial(parcialAtual, Date.now()), PARCIAL.pausaMs);
     }
   };
 
@@ -540,6 +609,44 @@ function criarReconhecedor(track) {
   };
 
   return r;
+}
+
+function quemFalouNaJanela(agora) {
+  const de = Math.max(tUltimoFinal, tInicioFrase) || (agora - 6000);
+  // Push-to-talk decide pelas TRANSICOES da tecla (exato, sem timer);
+  // duas entradas decidem pela energia amostrada no AudioWorklet.
+  return modo === "tecla"
+    ? quemFalouPorTransicoes(transicoes, de, agora)
+    : quemFalou(janela, de, agora);
+}
+
+function zerarFrase() {
+  clearTimeout(timerParcial);
+  parcialAtual = ""; textoDecidido = ""; tInicioFrase = 0; ultimoDisparo = 0;
+  document.querySelectorAll(".falas p.parcial").forEach(el => el.remove());
+}
+
+// Pergunta ao Jev com o texto que existe ate agora, sem esperar o ponto final.
+function dispararParcial(texto, agora) {
+  if (!texto) return;
+  // Nao repergunta a mesma coisa: so vale se apareceu texto novo suficiente.
+  if (texto.length - textoDecidido.length < PARCIAL.minCrescimento && texto.startsWith(textoDecidido)) return;
+  const quem = quemFalouNaJanela(agora);
+  if (quem !== "cliente") return;   // so a fala do cliente decide
+  textoDecidido = texto;
+  ultimoDisparo = agora;
+  decidir(texto);                   // NAO entra no historico: parcial ainda vai mudar
+}
+
+// Parcial aparece esmaecido, como no painel, para voce ver que esta ouvindo.
+function mostrarParcial(texto, agora) {
+  const quem = quemFalouNaJanela(agora);
+  const alvo = $(quem === "vendedor" ? "falasV" : "falasC");
+  document.querySelectorAll(".falas p.parcial").forEach(el => { if (el.parentNode !== alvo) el.remove(); });
+  let p = alvo.querySelector("p.parcial");
+  if (!p) { p = document.createElement("p"); p.className = "parcial"; alvo.appendChild(p); }
+  p.textContent = texto;
+  alvo.scrollTop = alvo.scrollHeight;
 }
 
 function escrever(quem, texto) {
@@ -690,6 +797,82 @@ window.addEventListener("blur", () => {
 });
 
 // ==================================================================
+// Roteiro de teste (teleprompter)
+// ==================================================================
+// Fica DENTRO desta página de propósito: o push-to-talk precisa do foco
+// para receber o espaço, e clicar noutra janela para ler o roteiro faria
+// a tecla parar de funcionar exatamente durante o teste.
+//
+// Você lê os dois papéis em voz alta. Nas falas azuis segura o espaço,
+// nas laranjas solta. É o caminho completo - microfone, ASR, atribuição,
+// Jev e card - sem precisar de uma segunda pessoa.
+const ROTEIRO = [
+  { seu: true,  fala: "Bom dia, falo com o responsável pelo pet shop?" },
+  { seu: false, fala: "Sou eu mesmo, pois não." },
+  { seu: true,  fala: "Meu nome é Rafael, eu trabalho com presença online pra pet shop aqui da região." },
+  { seu: false, fala: "Ah tá. E como você conseguiu meu número?" },
+  { seu: true,  fala: "Pelo Google Maps, o perfil de vocês aparece lá." },
+  { seu: false, fala: "Entendi. Mas olha, eu já tenho Instagram, posto direto lá." },
+  { seu: true,  fala: "Faz sentido. E quando alguém procura banho e tosa aqui no bairro, vocês aparecem?" },
+  { seu: false, fala: "Sinceramente, meu movimento todo é indicação. Cliente traz cliente." },
+  { seu: true,  fala: "Entendo. Hoje vocês atendem quantos banhos por dia, mais ou menos?" },
+  { seu: false, fala: "Uns quinze, vinte por dia, dependendo do dia." },
+  { seu: true,  fala: "E se aparecessem mais cinco por semana procurando no Google, dava conta?" },
+  { seu: false, fala: "Olha, eu acho que ninguém procura pet shop na internet não." },
+  { seu: true,  fala: "Entendo. A busca por pet shop perto de mim cresceu bastante." },
+  { seu: false, fala: "Pode ser. E quanto custa uma coisa dessas?" },
+  { seu: true,  fala: "O projeto sai por mil e duzentos reais, uma vez só, e fica seu." },
+  { seu: false, fala: "Nossa, mil e duzentos tá bem puxado pra mim agora." },
+  { seu: true,  fala: "Entendo. Se fosse metade disso, você faria hoje?" },
+  { seu: false, fala: "Olha, deixa eu pensar com calma e depois eu te retorno." },
+  { seu: true,  fala: "Claro. Só pra eu entender: o que te faria dizer sim?" },
+  { seu: false, fala: "Na verdade eu preciso conversar com minha esposa, ela cuida do dinheiro." }
+];
+
+let roteiroAtivo = false, passo = 0;
+
+function pintarRoteiro() {
+  const el = $("prompt");
+  if (passo >= ROTEIRO.length) {
+    el.className = "prompt";
+    $("promptQuem").textContent = "fim do roteiro";
+    $("promptConta").textContent = ROTEIRO.length + "/" + ROTEIRO.length;
+    $("promptFala").innerHTML = '<span class="prompt-fim">Acabou. Confira as colunas e os cards.</span>';
+    return;
+  }
+  const p = ROTEIRO[passo];
+  el.className = "prompt " + (p.seu ? "seu" : "dele");
+  $("promptQuem").textContent = p.seu ? "▓ SEGURE O ESPAÇO e leia" : "░ SOLTE O ESPAÇO e leia";
+  $("promptConta").textContent = (passo + 1) + "/" + ROTEIRO.length;
+  $("promptFala").textContent = p.fala;
+}
+
+function abrirRoteiro() {
+  roteiroAtivo = true; passo = 0;
+  $("prompt").classList.remove("oculto");
+  pintarRoteiro();
+}
+function fecharRoteiro() {
+  roteiroAtivo = false;
+  $("prompt").classList.add("oculto");
+}
+$("btRoteiro").onclick = () => { roteiroAtivo ? fecharRoteiro() : abrirRoteiro(); };
+
+document.addEventListener("keydown", e => {
+  if (!roteiroAtivo) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+  if (e.code === "ArrowRight" || e.code === "Enter") {
+    e.preventDefault();
+    if (passo < ROTEIRO.length) { passo++; pintarRoteiro(); }
+  } else if (e.code === "ArrowLeft") {
+    e.preventDefault();
+    if (passo > 0) { passo--; pintarRoteiro(); }
+  } else if (e.code === "Escape") {
+    e.preventDefault(); fecharRoteiro();
+  }
+});
+
+// ==================================================================
 // Começar / parar
 // ==================================================================
 $("bt").onclick = async () => {
@@ -721,6 +904,7 @@ $("bt").onclick = async () => {
 
 function parar() {
   ouvindo = false;
+  zerarFrase();
   if (rec) { try { rec.abort(); } catch (e) {} rec = null; }
   pararAudio();
   $("medV").style.width = 0; $("medC").style.width = 0;
