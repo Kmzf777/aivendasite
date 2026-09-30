@@ -1,0 +1,125 @@
+.fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: color-mix(in oklab, var(--vazio) 82%, transparent);
+  backdrop-filter: blur(7px);
+  animation: chega .2s var(--mola) both;
+}
+@keyframes chega { from { opacity: 0 } to { opacity: 1 } }
+
+.modal {
+  width: 100%;
+  max-width: 520px;
+  padding: 26px 28px 22px;
+  background: var(--painel);
+  border: 1px solid var(--linha-viva);
+  border-radius: var(--raio);
+  box-shadow: 0 50px 110px -50px #000, 0 0 0 1px rgba(255, 255, 255, .02) inset;
+  animation: sobe .26s var(--mola) both;
+}
+@keyframes sobe {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.topo { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 26px; }
+.titulo {
+  margin-top: 4px;
+  font-family: var(--fonte-serif), serif;
+  font-weight: 400;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -.02em;
+}
+.voltar {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--tinta-fantasma);
+  text-decoration: none;
+  transition: color .16s var(--mola);
+}
+.voltar:hover { color: var(--tinta); }
+
+.grupo { margin-bottom: 22px; }
+/* O rotulo da secao. :global porque .rotulo vem de globals.css. */
+.grupo > :global(.rotulo) { display: block; margin-bottom: 9px; }
+
+.modos { display: flex; gap: 7px; }
+.modo {
+  flex: 1;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--tinta-fraca);
+  background: var(--vazio);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-p);
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color .16s var(--mola), color .16s var(--mola), background .16s var(--mola);
+}
+.modo:hover { color: var(--tinta); }
+.modo.ativo {
+  color: var(--voce);
+  border-color: color-mix(in oklab, var(--voce) 60%, transparent);
+  background: color-mix(in oklab, var(--voce) 12%, var(--vazio));
+}
+
+.ajuda { margin-top: 9px; font-size: 12.5px; line-height: 1.5; color: var(--tinta-fantasma); }
+
+.rot {
+  display: block;
+  margin: 14px 0 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--voce);
+}
+.rotC { color: var(--cliente); }
+
+.medidor {
+  height: 5px;
+  margin-top: 7px;
+  background: var(--vazio);
+  border: 1px solid var(--linha);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.medidor span {
+  display: block;
+  height: 100%;
+  width: 0;
+  transition: width .05s linear;
+}
+.mV span { background: var(--voce); }
+.mC span { background: var(--cliente); }
+
+.testar { width: 100%; margin-top: 14px; font-size: 13px; padding: 9px; }
+
+.ruim, .morno {
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: var(--raio-p);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.ruim {
+  background: color-mix(in oklab, var(--erro) 12%, var(--vazio));
+  border: 1px solid color-mix(in oklab, var(--erro) 38%, transparent);
+  color: #ffc9c5;
+}
+.morno {
+  background: color-mix(in oklab, var(--sinal) 10%, var(--vazio));
+  border: 1px solid color-mix(in oklab, var(--sinal) 34%, transparent);
+  color: #ffe0b0;
+}
+
+.pe { display: flex; align-items: center; gap: 14px; margin-top: 24px; }
+.ligar { flex: 1; font-size: 15px; padding: 13px; }
+.conta { color: var(--tinta-fantasma); text-align: right; line-height: 1.4; }
+
+.nota { margin-top: 12px; font-size: 12px; color: var(--linha-viva); }
