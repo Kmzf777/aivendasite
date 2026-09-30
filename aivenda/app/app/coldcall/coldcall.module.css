@@ -1,0 +1,60 @@
+/* ==================================================================
+   Modo foco: três faixas, sem rolagem de página.
+   A tela toda recua para quase-preto; a luz é do card.
+   ================================================================== */
+
+.tela {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* A área de foco. Ocupa tudo o que sobrar e centraliza o card. */
+.palco {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px 28px 24px;
+  overflow-y: auto;
+}
+.palco:focus { outline: none; }
+.palco:focus-visible { outline: none; }
+
+/* Sem card, a tela quase desaparece: é o repouso do instrumento. */
+.espera { text-align: center; max-width: 46ch; }
+.espera p { margin-top: 10px; font-size: 14.5px; color: var(--tinta-fantasma); }
+.dica { color: var(--linha-viva) !important; font-size: 13px !important; }
+.dica kbd {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 11px;
+  color: var(--tinta-fantasma);
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+/* Recado durante a call: visível, mas nunca do tamanho do card. */
+.recado {
+  flex-shrink: 0;
+  margin: 0 20px 10px;
+  padding: 9px 13px;
+  border-radius: var(--raio-p);
+  font-size: 12.5px;
+  line-height: 1.45;
+  background: color-mix(in oklab, var(--sinal) 10%, var(--vazio));
+  border: 1px solid color-mix(in oklab, var(--sinal) 32%, transparent);
+  color: #ffe0b0;
+}
+.recadoRuim {
+  background: color-mix(in oklab, var(--erro) 12%, var(--vazio));
+  border-color: color-mix(in oklab, var(--erro) 38%, transparent);
+  color: #ffc9c5;
+}
+
+@media (max-width: 720px) {
+  .palco { padding: 18px 14px; }
+  .recado { margin: 0 14px 8px; }
+}

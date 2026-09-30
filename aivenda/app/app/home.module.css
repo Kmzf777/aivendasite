@@ -1,0 +1,89 @@
+.tela {
+  min-height: 100vh;
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 72px 28px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 46px;
+}
+
+.topo { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; }
+
+.marca {
+  font-family: var(--fonte-serif), serif;
+  font-size: 46px;
+  font-weight: 400;
+  letter-spacing: -.02em;
+  line-height: 1;
+}
+.lema { margin-top: 10px; color: var(--tinta-fraca); font-size: 15px; max-width: 42ch; }
+.lema em { color: var(--tinta); font-style: italic; }
+
+.estado { margin-left: auto; display: flex; align-items: center; gap: 9px; padding-top: 10px; }
+.luz { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.acesa  { background: var(--ok);  box-shadow: 0 0 9px var(--ok); }
+.apagada{ background: var(--erro); box-shadow: 0 0 9px var(--erro); }
+
+.portas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 720px) { .portas { grid-template-columns: 1fr; } }
+
+.porta {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 26px 26px 30px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+  transition: border-color .22s var(--mola), transform .22s var(--mola), background .22s var(--mola);
+}
+.porta:hover { border-color: var(--linha-viva); transform: translateY(-2px); background: var(--alto); }
+
+/* A porta principal carrega o fio de luz: e pra la que voce vai na call. */
+.principal::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--voce);
+}
+.principal:hover { border-color: color-mix(in oklab, var(--voce) 45%, var(--linha)); }
+
+.porta h2 {
+  font-family: var(--fonte-serif), serif;
+  font-weight: 400;
+  font-size: 30px;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+}
+.porta p { color: var(--tinta-fraca); font-size: 14px; max-width: 34ch; }
+
+.seta {
+  position: absolute;
+  right: 22px; bottom: 20px;
+  font-size: 19px;
+  color: var(--tinta-fantasma);
+  transition: transform .22s var(--mola), color .22s var(--mola);
+}
+.porta:hover .seta { transform: translateX(4px); color: var(--tinta); }
+
+.alerta {
+  padding: 14px 18px;
+  border-radius: var(--raio-p);
+  background: color-mix(in oklab, var(--erro) 12%, var(--vazio));
+  border: 1px solid color-mix(in oklab, var(--erro) 40%, transparent);
+  color: #ffc9c5;
+  font-size: 13.5px;
+}
+.alerta code {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 12.5px;
+  background: rgba(0,0,0,.35);
+  padding: 1px 6px;
+  border-radius: 4px;
+}

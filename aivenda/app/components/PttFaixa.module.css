@@ -1,0 +1,87 @@
+.faixa {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 20px;
+  height: 62px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--linha);
+  background: linear-gradient(180deg, var(--painel), var(--vazio));
+  transition: border-color .18s var(--mola);
+}
+/* Segurando o espaço, a faixa inteira reconhece que a voz é sua. */
+.faixa.seu { border-bottom-color: color-mix(in oklab, var(--voce) 55%, var(--linha)); }
+
+.quem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 232px;
+  flex-shrink: 0;
+}
+
+/* Os três blocos do mostrador: apagados = solto, acesos = você falando. */
+.blocos { display: flex; gap: 3px; }
+.blocos i {
+  width: 7px;
+  height: 15px;
+  border-radius: 1.5px;
+  background: var(--linha-viva);
+  transition: background .1s var(--mola), box-shadow .1s var(--mola);
+}
+.seu .blocos i { background: var(--voce); box-shadow: 0 0 10px -1px var(--voce); }
+
+.papel { color: var(--cliente); transition: color .1s var(--mola); }
+.seu .papel { color: var(--voce); }
+
+.tecla {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 10px;
+  letter-spacing: .06em;
+  color: var(--tinta-fantasma);
+  background: var(--vazio);
+  border: 1px solid var(--linha);
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+
+.curva { flex: 1; height: 38px; min-width: 60px; }
+
+.direita {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.fase { color: var(--tinta-fantasma); }
+.situacao { display: flex; align-items: center; gap: 7px; color: var(--tinta-fantasma); }
+.luz {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--tinta-fantasma);
+  transition: background .2s var(--mola), box-shadow .2s var(--mola);
+}
+.luz.viva { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+
+.desligar {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+  background: none;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-p);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: color .16s var(--mola), border-color .16s var(--mola);
+}
+.desligar:hover { color: var(--erro); border-color: color-mix(in oklab, var(--erro) 45%, transparent); }
+
+@media (max-width: 720px) {
+  .faixa { gap: 12px; padding: 0 14px; }
+  .quem { min-width: 0; }
+  .papel { display: none; }
+  .fase { display: none; }
+}
