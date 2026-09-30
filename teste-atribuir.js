@@ -1,5 +1,5 @@
 // Testa a atribuição de falante por energia de dois canais. Offline.
-const { ATRIB, quemFalou, dominancia } = require("./lib/atribuir.js");
+const { ATRIB, TECLA, quemFalou, quemFalouPorTecla, dominancia } = require("./lib/atribuir.js");
 
 let falhas = 0;
 const checa = (n, c, extra) => {
@@ -58,6 +58,30 @@ checa("dominancia de janela vazia é null", dominancia([], 0, 10) === null);
 
 console.log("\nconfig");
 checa("margem padrão é 1.6", ATRIB.margem === 1.6);
+
+
+// ---------- push-to-talk ----------
+console.log("");
+console.log("push-to-talk");
+function tec(t0, n, segurado) {
+  const a = [];
+  for (let i = 0; i < n; i++) a.push({ t: t0 + i * 50, tecla: typeof segurado === "function" ? segurado(i, n) : segurado });
+  return a;
+}
+
+checa("segurando o tempo todo -> você", quemFalouPorTecla(tec(0, 20, true), 0, 1000) === "vendedor");
+checa("solto o tempo todo -> cliente", quemFalouPorTecla(tec(0, 20, false), 0, 1000) === "cliente");
+checa("soltou no finalzinho ainda é você (80%)", quemFalouPorTecla(tec(0, 20, i => i < 16), 0, 1000) === "vendedor");
+checa("toque acidental curto ainda é cliente (10%)", quemFalouPorTecla(tec(0, 20, i => i < 2), 0, 1000) === "cliente");
+checa("tecla mudou no meio (50/50) -> não atribui", quemFalouPorTecla(tec(0, 20, i => i < 10), 0, 1000) === null);
+checa("40% segurado -> não atribui", quemFalouPorTecla(tec(0, 20, i => i < 8), 0, 1000) === null);
+checa("janela vazia -> null", quemFalouPorTecla([], 0, 1000) === null);
+checa("amostras null -> null", quemFalouPorTecla(null, 0, 1000) === null);
+const linhaT = tec(0, 20, true).concat(tec(2000, 20, false));
+checa("respeita a janela (início segurado)", quemFalouPorTecla(linhaT, 0, 999) === "vendedor");
+checa("respeita a janela (fim solto)", quemFalouPorTecla(linhaT, 2000, 3000) === "cliente");
+checa("limiares configuráveis", quemFalouPorTecla(tec(0, 20, i => i < 10), 0, 1000, { limiarSeu: 0.5 }) === "vendedor");
+checa("limiar padrão de seu é 0.6", TECLA.limiarSeu === 0.6);
 
 console.log(falhas === 0 ? "\nTUDO OK" : "\n" + falhas + " FALHA(S)");
 process.exit(falhas === 0 ? 0 : 1);

@@ -85,6 +85,19 @@
   footer .dir { margin-left:auto; }
   .luz { width:7px; height:7px; border-radius:50%; background:var(--fraquinho); display:inline-block; margin-right:6px; }
   .luz.viva { background:var(--ok); box-shadow:0 0 7px var(--ok); }
+  .modos { display:flex; gap:6px; margin-bottom:10px; }
+  .modo { flex:1; background:var(--painel); border:1px solid var(--linha); color:var(--fraco);
+    border-radius:8px; padding:9px; font-size:13px; font-weight:600; cursor:pointer; }
+  .modo.ativo { border-color:var(--voce); color:var(--voce); background:#10243a; }
+  .ptt { display:flex; align-items:center; gap:10px; padding:11px 16px; border-radius:10px;
+    background:var(--painel); border:1px solid var(--linha); margin-bottom:14px; flex-shrink:0;
+    font-size:14px; font-weight:600; color:var(--fraco); transition:background .08s, border-color .08s, color .08s; }
+  .ptt.falando { background:#10243a; border-color:var(--voce); color:var(--voce); }
+  .ptt-luz { width:10px; height:10px; border-radius:50%; background:var(--cliente); flex-shrink:0; }
+  .ptt.falando .ptt-luz { background:var(--voce); box-shadow:0 0 9px var(--voce); }
+  .ptt kbd { margin-left:auto; font:inherit; font-size:11px; background:var(--bg); border:1px solid var(--linha);
+    border-radius:5px; padding:2px 8px; color:var(--fraquinho); font-weight:600; }
+  .ptt.oculto { display:none; }
 </style>
 </head>
 <body>
@@ -99,17 +112,29 @@
 <main>
   <section class="lado">
     <div class="grupo">
-      <h2>1. Escolha as entradas</h2>
-      <label class="v">Você (microfone / headset)</label>
+      <h2>1. Como separar as vozes</h2>
+      <div class="modos">
+        <button class="modo ativo" data-modo="tecla">Push-to-talk</button>
+        <button class="modo" data-modo="dois">Duas entradas</button>
+      </div>
+      <p class="ajuda" id="ajudaModo">
+        Uma entrada só. Segure <b>ESPAÇO</b> enquanto você fala; solto, é o cliente.
+        Sem hardware. Funciona com viva-voz, presencial, qualquer fonte.
+      </p>
+    </div>
+
+    <div class="grupo" id="grupoEntradas">
+      <h2>Entradas</h2>
+      <label class="v" id="labelV">Você (microfone / headset)</label>
       <select id="devV"></select>
       <div class="medidor v"><i id="medV"></i></div>
 
-      <label class="c">Cliente (cabo / placa USB / linha)</label>
+      <label class="c" id="labelC">Cliente (cabo / placa USB / linha)</label>
       <select id="devC"></select>
       <div class="medidor c"><i id="medC"></i></div>
 
       <button class="sec" id="btTestar">Testar níveis</button>
-      <p class="ajuda">
+      <p class="ajuda" id="ajudaNiveis">
         Fale: só a barra <b>azul</b> deve subir. Peça para o cliente falar: só a
         <b>laranja</b>. Se as duas subirem juntas, há vazamento — use fone.
       </p>
@@ -141,6 +166,7 @@
       <div class="col v"><h3><i class="luz" id="luzV"></i>Você</h3><div class="falas" id="falasV"></div></div>
       <div class="col c"><h3><i class="luz" id="luzC"></i>Cliente</h3><div class="falas" id="falasC"></div></div>
     </div>
+    <div id="ptt" class="ptt"><span class="ptt-luz"></span><span id="pttTxt">Solto — ouvindo o cliente</span><kbd>espaço</kbd></div>
     <div id="palco"><div class="vazio">O card aparece aqui quando o cliente objetar.</div></div>
   </section>
 </main>
@@ -176,6 +202,8 @@ let objecoes = JSON.parse(JSON.stringify(OBJECOES_EXEMPLO));
 let ctx, anV, anC, dest, streams = [], rec = null, timerNivel = null;
 let ouvindo = false, falas = [], ultimaMostrada = null, seq = 0;
 let janela = [], tUltimoFinal = 0;
+let modo = "tecla";        // "tecla" = push-to-talk | "dois" = duas entradas
+let teclaApertada = false;
 let latencias = [], decisoes = 0, custoTotal = 0;
 
 function aviso(msg, bom) {
@@ -212,14 +240,40 @@ async function listarDispositivos() {
 
 function conferirEscolha() {
   const v = $("devV").value, c = $("devC").value;
-  const ok = v && c && v !== c;
-  $("bt").disabled = !ok;
+  if (modo === "tecla") {
+    $("bt").disabled = !v;
+    $("ajudaRodar").textContent = v
+      ? "Pronto. Mantenha esta janela em foco durante a call — é ela que recebe o espaço."
+      : "Escolha sua entrada de microfone.";
+    return;
+  }
+  $("bt").disabled = !(v && c && v !== c);
   $("ajudaRodar").textContent = !v || !c
     ? "Escolha as duas entradas acima. Elas precisam ser dispositivos diferentes."
     : v === c
       ? "As duas entradas são o mesmo dispositivo. Sem dois canais separados não dá para saber quem falou."
       : "Pronto. Teste os níveis antes de começar.";
 }
+document.querySelectorAll(".modo").forEach(b => {
+  b.onclick = () => {
+    if (ouvindo) return;
+    modo = b.dataset.modo;
+    document.querySelectorAll(".modo").forEach(x => x.classList.toggle("ativo", x === b));
+    $("ptt").classList.toggle("oculto", modo !== "tecla");
+    const so1 = modo === "tecla";
+    $("labelV").textContent = so1 ? "Microfone (ouve você e o cliente)" : "Você (microfone / headset)";
+    $("labelC").style.display = so1 ? "none" : "";
+    $("devC").style.display = so1 ? "none" : "";
+    document.querySelector(".medidor.c").style.display = so1 ? "none" : "";
+    $("btTestar").style.display = so1 ? "none" : "";
+    $("ajudaNiveis").style.display = so1 ? "none" : "";
+    $("ajudaModo").innerHTML = so1
+      ? "Uma entrada só. Segure <b>ESPAÇO</b> enquanto você fala; solto, é o cliente. Sem hardware. Funciona com viva-voz, presencial, qualquer fonte."
+      : "Duas entradas separadas (ex.: microfone + placa USB com o cabo do celular). Determinístico, mas precisa de hardware.";
+    conferirEscolha();
+  };
+});
+
 $("devV").onchange = conferirEscolha;
 $("devC").onchange = conferirEscolha;
 
@@ -237,16 +291,17 @@ async function abrirCanais() {
   };
 
   const fV = await pegar($("devV").value);
-  const fC = await pegar($("devC").value);
+  // No push-to-talk ha UMA fonte so: quem rotula e a tecla, nao a energia.
+  const fC = modo === "dois" ? await pegar($("devC").value) : null;
 
   anV = ctx.createAnalyser(); anV.fftSize = 512; anV.smoothingTimeConstant = 0.2;
   anC = ctx.createAnalyser(); anC.fftSize = 512; anC.smoothingTimeConstant = 0.2;
-  fV.connect(anV); fC.connect(anC);
+  fV.connect(anV); if (fC) fC.connect(anC);
 
   // Mistura para UM reconhecedor. Nao conecta em ctx.destination:
   // tocar nas caixas criaria eco de volta no microfone.
   dest = ctx.createMediaStreamDestination();
-  fV.connect(dest); fC.connect(dest);
+  fV.connect(dest); if (fC) fC.connect(dest);
   return dest.stream.getAudioTracks()[0];
 }
 
@@ -261,12 +316,12 @@ function nivel(an) {
 function comecarMedicao(mostrarBarras) {
   clearInterval(timerNivel);
   timerNivel = setInterval(() => {
-    const eV = nivel(anV), eC = nivel(anC);
+    const eV = nivel(anV), eC = modo === "dois" ? nivel(anC) : 0;
     if (mostrarBarras) {
       $("medV").style.width = Math.min(100, eV * 260) + "%";
       $("medC").style.width = Math.min(100, eC * 260) + "%";
     }
-    janela.push({ t: Date.now(), eV, eC });
+    janela.push({ t: Date.now(), eV, eC, tecla: teclaApertada });
     if (janela.length > 2000) janela = janela.slice(-1200);
   }, AMOSTRA_MS);
 }
@@ -311,7 +366,10 @@ function criarReconhecedor(track) {
       if (!ev.results[i].isFinal) continue;
       const texto = ev.results[i][0].transcript.trim();
       if (!texto) continue;
-      const quem = quemFalou(janela, tUltimoFinal || agora - 6000, agora);
+      const de = tUltimoFinal || agora - 6000;
+      const quem = modo === "tecla"
+        ? quemFalouPorTecla(janela, de, agora)
+        : quemFalou(janela, de, agora);
       tUltimoFinal = agora;
       if (!quem) continue;   // sobreposicao: nao da para atribuir com honestidade
       registrar(quem, texto);
@@ -422,6 +480,31 @@ function rodape() {
 }
 
 // ==================================================================
+// Push-to-talk
+// ==================================================================
+// O reconhecedor NAO para nem comeca junto com a tecla: start -> audiostart
+// leva ~208ms e comeria o inicio de cada frase. Ele roda continuo e a tecla
+// so rotula, pela janela de tempo em que a frase aconteceu.
+function pintarPtt() {
+  $("ptt").classList.toggle("falando", teclaApertada);
+  $("pttTxt").textContent = teclaApertada ? "Você está falando" : "Solto — ouvindo o cliente";
+}
+
+document.addEventListener("keydown", e => {
+  if (e.code !== "Space" || modo !== "tecla" || e.repeat) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+  e.preventDefault();               // senao o espaco rola a pagina
+  teclaApertada = true; pintarPtt();
+});
+document.addEventListener("keyup", e => {
+  if (e.code !== "Space" || modo !== "tecla") return;
+  e.preventDefault();
+  teclaApertada = false; pintarPtt();
+});
+// Perder o foco com a tecla presa deixaria tudo rotulado como voce.
+window.addEventListener("blur", () => { if (teclaApertada) { teclaApertada = false; pintarPtt(); } });
+
+// ==================================================================
 // Começar / parar
 // ==================================================================
 $("bt").onclick = async () => {
@@ -466,6 +549,7 @@ function parar() {
     const l = await r.json();
     if (Array.isArray(l) && l.length) objecoes = l;
   } catch (e) {}
+  document.querySelector('.modo[data-modo="tecla"]').click();
   await listarDispositivos();
   navigator.mediaDevices.addEventListener("devicechange", listarDispositivos);
 })();
