@@ -72,15 +72,37 @@
 .medida i { font-size: 12px; font-style: normal; color: var(--tinta-fantasma); }
 
 /* A frase que ele vai FALAR. Serifa em corpo grande: bate o olho e sai. */
-.headline {
-  margin-top: 8px;
+.deixa {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--voce);
+}
+.alerta .deixa { color: var(--sinal); }
+
+/* O argumento e o maior corpo da tela: e o texto que o vendedor vai FALAR.
+   Serifa porque e fala, nao rotulo. clamp generoso, mas nao gigante como
+   uma headline de duas palavras - aqui sao ~2 linhas de frase, e passar de
+   ~40px faz o paragrafo quebrar em coluna estreita demais para ler rapido. */
+.argumento {
+  margin-top: 6px;
   font-family: var(--fonte-serif), serif;
   font-weight: 400;
-  font-size: clamp(34px, 5.2vw, 64px);
-  line-height: 1.04;
-  letter-spacing: -.02em;
+  font-size: clamp(26px, 3.4vw, 40px);
+  line-height: 1.22;
+  letter-spacing: -.012em;
   color: var(--tinta);
-  text-wrap: balance;
+  text-wrap: pretty;
+  max-width: 26ch;
+}
+
+.semArg {
+  margin-top: 10px;
+  font-size: 17px;
+  font-style: italic;
+  color: var(--tinta-fantasma);
 }
 
 .regua {
@@ -115,30 +137,13 @@
 .pe {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 26px;
+  justify-content: flex-end;
+  margin-top: 24px;
   padding-top: 13px;
   border-top: 1px solid var(--linha);
 }
 
-.segurar {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--tinta-fantasma);
-  background: none;
-  border: 0;
-  padding: 4px 0;
-  cursor: pointer;
-  transition: color .14s var(--mola);
-  touch-action: none; /* segurar com o dedo não deve rolar a tela */
-}
+
 .segurar kbd {
   display: grid;
   place-items: center;

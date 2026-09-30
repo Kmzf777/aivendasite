@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import CardHistorico from "@/components/CardHistorico";
 import CardObjecao from "@/components/CardObjecao";
 import ModalConfig from "@/components/ModalConfig";
@@ -8,7 +8,6 @@ import PttFaixa from "@/components/PttFaixa";
 import { useCatalogo } from "@/hooks/useCatalogo";
 import { useCopiloto } from "@/hooks/useCopiloto";
 import { useDispositivos } from "@/hooks/useDispositivos";
-import { useSegurar } from "@/hooks/useSegurar";
 import type { Modo } from "@/hooks/motorCopiloto";
 import estilo from "./coldcall.module.css";
 
@@ -36,13 +35,6 @@ export default function ColdCall() {
   const { entradas, erro: erroEntradas, pronto } = useDispositivos();
 
   const noAr = estado.situacao === "ouvindo";
-  const temArgumento = !!estado.card?.argumento;
-
-  // A seta ↓ mostra o argumento completo enquanto estiver presa. NUNCA o
-  // espaço: o espaço é o push-to-talk e pertence ao motor.
-  const porTecla = useSegurar("ArrowDown", noAr && temArgumento);
-  const [porDedo, setPorDedo] = useState(false);
-  const aberto = porTecla || porDedo;
 
   const palco = useRef<HTMLDivElement>(null);
 
@@ -90,12 +82,7 @@ export default function ColdCall() {
               // A `key` fica AQUI, não dentro do componente: é ela que remonta
               // o card a cada decisão e faz a animação de acender renascer.
               // Chave dentro do próprio componente não remonta coisa nenhuma.
-              <CardObjecao
-                key={estado.card.chave}
-                card={estado.card}
-                aberto={aberto}
-                aoSegurar={setPorDedo}
-              />
+              <CardObjecao key={estado.card.chave} card={estado.card} />
             ) : (
               <div className={estilo.espera}>
                 <span className="rotulo">ouvindo</span>
