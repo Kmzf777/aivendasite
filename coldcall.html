@@ -254,9 +254,15 @@ let janela = [], tUltimoFinal = 0;
 // conserto e so decidir quando perguntar.
 // ------------------------------------------------------------------
 const PARCIAL = {
-  pausaMs: 700,        // silencio curto: a frase provavelmente acabou
-  tetoMs: 1800,        // falando sem parar, pergunta assim mesmo a cada tanto
-  minCrescimento: 10   // so repergunta se apareceu texto novo que valha
+  pausaMs: 500,        // silencio curto: a frase provavelmente acabou
+  tetoMs: 1200,        // falando sem parar, pergunta assim mesmo a cada tanto
+  minCrescimento: 10,  // so REpergunta se apareceu texto novo que valha
+  // Quando o primeiro parcial chega, a pessoa ja comecou a falar ha um
+  // tempo: o ASR do Chrome atrasa. Sem essa folga a janela de atribuicao
+  // nascia com largura ZERO, a atribuicao devolvia null e a primeira
+  // chance de decidir era sempre jogada fora - era isso que fazia o
+  // sistema parecer lento. So vale quando onspeechstart nao disparou.
+  atrasoAsrMs: 1200
 };
 let parcialAtual = "", timerParcial = null, ultimoDisparo = 0;
 let textoDecidido = "", tInicioFrase = 0;
@@ -555,9 +561,13 @@ function criarReconhecedor(track) {
 
   r.onstart = () => { $("luzV").classList.add("viva"); $("luzC").classList.add("viva"); };
 
+  // Marca o inicio da fala no dominio do AUDIO, nao no da rede. E o
+  // melhor ancoradouro que existe para a janela de atribuicao.
+  r.onspeechstart = () => { if (!tInicioFrase) tInicioFrase = Date.now(); };
+
   r.onresult = ev => {
     const agora = Date.now();
-    if (!tInicioFrase) tInicioFrase = agora;
+    if (!tInicioFrase) tInicioFrase = agora - PARCIAL.atrasoAsrMs;
 
     let parcial = "";
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
@@ -629,8 +639,12 @@ function zerarFrase() {
 // Pergunta ao Jev com o texto que existe ate agora, sem esperar o ponto final.
 function dispararParcial(texto, agora) {
   if (!texto) return;
-  // Nao repergunta a mesma coisa: so vale se apareceu texto novo suficiente.
-  if (texto.length - textoDecidido.length < PARCIAL.minCrescimento && texto.startsWith(textoDecidido)) return;
+  // Nao repergunta a mesma coisa. Mas o portao so vale da SEGUNDA vez em
+  // diante: exigir crescimento na primeira pulava objecao curta, e
+  // "ta caro" tem 7 caracteres - justamente a que mais importa.
+  if (textoDecidido &&
+      texto.length - textoDecidido.length < PARCIAL.minCrescimento &&
+      texto.startsWith(textoDecidido)) return;
   const quem = quemFalouNaJanela(agora);
   if (quem !== "cliente") return;   // so a fala do cliente decide
   textoDecidido = texto;
