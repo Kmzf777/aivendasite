@@ -60,8 +60,23 @@ checa("card traz a confiança", r1.confianca === 1.0);
 checa("frase cortada espera (mesmo com objeção clara)",
   aplicarRegra(resposta(0.96, "ta_caro", 0.99, 0.20), OBJECOES_EXEMPLO, null).acao === "esperar");
 
-checa("tem_objecao abaixo de 0.6 -> nada",
-  aplicarRegra(resposta(0.50, "ta_caro", 0.99, 0.9), OBJECOES_EXEMPLO, null).acao === "nada");
+// A porta da esquerda continua fechada: objeção fraca + confiança comum = nada.
+// A confiança deste caso era 0.99 e caiu para 0.80 porque 0.99 agora abre a
+// porta da direita de propósito — ver o teste da união logo abaixo.
+checa("tem_objecao abaixo de 0.6 e confiança comum -> nada",
+  aplicarRegra(resposta(0.50, "ta_caro", 0.80, 0.9), OBJECOES_EXEMPLO, null).acao === "nada");
+
+// Patch 0001, porta da direita: o cliente RESPONDEU em vez de objetar, então o
+// tem_objecao fica baixo e só a confiança da escolha sustenta o card.
+checa("tem_objecao baixo mas confiança >= 0.95 -> card (união)",
+  aplicarRegra(resposta(0.14, "ta_caro", 0.99, 0.9), OBJECOES_EXEMPLO, null).acao === "card");
+checa("confiança logo abaixo de 0.95 não abre a porta da direita",
+  aplicarRegra(resposta(0.14, "ta_caro", 0.94, 0.9), OBJECOES_EXEMPLO, null).acao === "nada");
+
+// Patch 0001-B: frase cortada é detectada mesmo quando ainda não parece objeção.
+// Antes, obj=0.41 devolvia "nada" e jogava fora um fim=0.09 correto.
+checa("frase cortada espera mesmo com objeção fraca",
+  aplicarRegra(resposta(0.41, "ta_caro", 0.90, 0.09), OBJECOES_EXEMPLO, null).acao === "esperar");
 
 checa("exatamente 0.6 passa (limiar inclusivo)",
   aplicarRegra(resposta(0.60, "ta_caro", 0.99, 0.9), OBJECOES_EXEMPLO, null).acao === "card");
