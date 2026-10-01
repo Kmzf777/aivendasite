@@ -10,6 +10,8 @@ create table if not exists perfis (
   id         uuid primary key references auth.users(id) on delete cascade,
   nome       text not null default '',
   email      text not null default '',
+  -- Admin abre o Cold call. Muda só pelo banco: ver o trigger adiante.
+  admin      boolean not null default false,
   criado_em  timestamptz not null default now()
 );
 
@@ -170,6 +172,27 @@ create policy perfis_leitura on perfis for select to authenticated using (true);
 drop policy if exists perfis_edicao on perfis;
 create policy perfis_edicao on perfis for update to authenticated
   using (id = auth.uid()) with check (id = auth.uid());
+
+-- Sem isto, a política perfis_edicao (cada um edita a própria linha, que é
+-- o que permite trocar o próprio nome) deixaria qualquer vendedor rodar
+-- `update perfis set admin = true where id = auth.uid()`. RLS é por linha,
+-- não por coluna. A condição `auth.uid() is not null` barra sessão de
+-- usuário e libera service_role e SQL Editor, que não têm uid.
+create or replace function proteger_admin()
+returns trigger language plpgsql as $adm$
+begin
+  if new.admin is distinct from old.admin and auth.uid() is not null then
+    raise exception 'Quem é admin só muda pelo banco, não pela aplicação.'
+      using errcode = 'insufficient_privilege';
+  end if;
+  return new;
+end;
+$adm$;
+
+drop trigger if exists ao_mexer_em_admin on perfis;
+create trigger ao_mexer_em_admin
+  before update on perfis
+  for each row execute function proteger_admin();
 
 -- leads: todos leem o poço inteiro. Sem isso a atribuição não avisa ninguém.
 drop policy if exists leads_leitura on leads;

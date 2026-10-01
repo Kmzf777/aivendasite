@@ -1,116 +1,75 @@
-"use client";
+import Link from "next/link";
+import Console from "./Console";
+import { perfilAtual } from "@/lib/auth";
+import { temCredenciaisServidor } from "@/lib/supabase/servidor";
+import estilo from "./portao.module.css";
 
-import { useRef } from "react";
-import CardHistorico from "@/components/CardHistorico";
-import CardObjecao from "@/components/CardObjecao";
-import ModalConfig from "@/components/ModalConfig";
-import PttFaixa from "@/components/PttFaixa";
-import { useCatalogo } from "@/hooks/useCatalogo";
-import { useCopiloto } from "@/hooks/useCopiloto";
-import { useDispositivos } from "@/hooks/useDispositivos";
-import type { Modo } from "@/hooks/motorCopiloto";
-import estilo from "./coldcall.module.css";
-
-// ==================================================================
-// /coldcall — o modo foco.
+// O Cold call é só para admin.
 //
-// Três faixas: quem está falando (com a curva de voz), o card, e o
-// rastro da call. A transcrição NÃO aparece: em foco se lê o card.
-//
-// Toda a lógica de áudio, reconhecimento e decisão está no motor
-// (hooks/motorCopiloto.ts), FORA do React. Esta página só desenha o
-// estado dele e chama ações a partir de cliques e teclas.
-//
-// POR QUE NADA É LIGADO NUM EFEITO (a armadilha que vai morder quem
-// mexer aqui): o StrictMode do Next monta e desmonta todo efeito duas
-// vezes em desenvolvimento, e o Chrome permite UM SpeechRecognition por
-// processo — a segunda montagem abortaria o reconhecedor da primeira e
-// o reconhecimento morreria em silêncio, com a tela parecendo certa.
-// Então ligar só acontece no clique em "Ligar", que é gesto do usuário e
-// não é duplicado. Detalhes na trava de motorCopiloto.ts.
-// ==================================================================
-export default function ColdCall() {
-  const { estado, motor } = useCopiloto();
-  const { objecoes, erro: erroCatalogo } = useCatalogo();
-  const { entradas, erro: erroEntradas, pronto } = useDispositivos();
+// A checagem mora AQUI, num Server Component, e não no menu nem no proxy:
+//   - o menu esconder o link é cosmética; quem digita a URL passa por cima;
+//   - o proxy rodaria uma consulta ao banco em TODA requisição do site,
+//     inclusive nas que não têm nada com isso.
+// Aqui a consulta acontece uma vez, na página que precisa dela, e quem não
+// é admin não recebe nem o console.
+export const dynamic = "force-dynamic";
 
-  const noAr = estado.situacao === "ouvindo";
-
-  const palco = useRef<HTMLDivElement>(null);
-
-  const ligar = async (op: { idV: string; idC: string; modo: Modo }) => {
-    await motor.ligar(op);
-    // O foco volta para a tela: o botão "Ligar" desaparece e o espaço
-    // tem que chegar ao documento, não a um controle esquecido.
-    palco.current?.focus();
-  };
-
+function Portao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <main className={estilo.tela}>
-      {!noAr && (
-        <ModalConfig
-          entradas={entradas}
-          erroEntradas={erroEntradas}
-          prontoEntradas={pronto}
-          estado={estado}
-          quantasObjecoes={objecoes.length}
-          erroCatalogo={erroCatalogo}
-          lerNiveis={motor.lerNiveis}
-          aoTestar={(op) => void motor.testar(op)}
-          aoPararTeste={() => motor.pararTeste()}
-          aoLigar={(op) => void ligar(op)}
-        />
-      )}
-
-      {noAr && (
-        <>
-          <PttFaixa
-            modo={estado.modo}
-            apertado={estado.apertado}
-            ouvindo={noAr}
-            ouvindoVoz={estado.ouvindoVoz}
-            decidindo={estado.decidindo}
-            esperando={estado.ultimaAcao === "esperar"}
-            faseCall={estado.faseCall}
-            ler={motor.lerCurva}
-            escala={motor.escala}
-            aoDesligar={motor.desligar}
-          />
-
-          <div className={estilo.palco} ref={palco} tabIndex={-1}>
-            {estado.card ? (
-              // A `key` fica AQUI, não dentro do componente: é ela que remonta
-              // o card a cada decisão e faz a animação de acender renascer.
-              // Chave dentro do próprio componente não remonta coisa nenhuma.
-              <CardObjecao key={estado.card.chave} card={estado.card} />
-            ) : (
-              <div className={estilo.espera}>
-                <span className="rotulo">ouvindo</span>
-                <p>O card aparece aqui quando o cliente objetar.</p>
-                {estado.modo === "tecla" && (
-                  <p className={estilo.dica}>
-                    Segure <kbd>espaço</kbd> enquanto você fala. Solto, o que entrar é do cliente.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {(estado.aviso || estado.erro) && (
-            <p className={`${estilo.recado} ${estado.erro ? estilo.recadoRuim : ""}`}>
-              {estado.erro || estado.aviso}
-            </p>
-          )}
-
-          <CardHistorico
-            itens={estado.historico}
-            decisoes={estado.decisoes}
-            latencia={estado.latencia}
-            custo={estado.custo}
-            modelo={estado.modelo}
-          />
-        </>
-      )}
+    <main className={estilo.portao}>
+      <span className="rotulo">cold call</span>
+      <h1>{titulo}</h1>
+      <div className={estilo.corpo}>{children}</div>
+      <Link href="/lista" className="btn">
+        Voltar para a lista
+      </Link>
     </main>
   );
+}
+
+export default async function PaginaColdCall() {
+  // Sem banco não há como saber quem é admin. Liberar seria abrir a porta
+  // justamente quando não dá para conferir a chave.
+  if (!temCredenciaisServidor()) {
+    return (
+      <Portao titulo="Sem banco, sem permissão">
+        <p>
+          O Cold call é restrito a admin, e sem <code>NEXT_PUBLIC_SUPABASE_URL</code> não dá para
+          saber quem é. Configure o <code>.env</code> do projeto e reinicie o servidor.
+        </p>
+      </Portao>
+    );
+  }
+
+  const perfil = await perfilAtual();
+
+  if (!perfil) {
+    return (
+      <Portao titulo="Entre para continuar">
+        <p>O Cold call precisa saber quem é você.</p>
+        <p>
+          <Link href="/login?de=%2Fcoldcall" className="btn btn-forte">
+            Entrar
+          </Link>
+        </p>
+      </Portao>
+    );
+  }
+
+  if (!perfil.admin) {
+    return (
+      <Portao titulo="Só para admin">
+        <p>
+          O Cold call está liberado apenas para administradores. Você entrou como{" "}
+          <strong>{perfil.nome}</strong>.
+        </p>
+        <p className={estilo.pista}>
+          Quem é admin muda só pelo banco, não pela aplicação — peça a quem administra o
+          Supabase.
+        </p>
+      </Portao>
+    );
+  }
+
+  return <Console />;
 }

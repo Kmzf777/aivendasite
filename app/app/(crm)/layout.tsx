@@ -1,4 +1,5 @@
 import MenuLateral from "@/components/MenuLateral";
+import { perfilAtual } from "@/lib/auth";
 import SessaoMenu from "@/components/SessaoMenu";
 import FocoProvedor from "@/components/FocoProvedor";
 import estilo from "./crm.module.css";
@@ -9,11 +10,13 @@ import estilo from "./crm.module.css";
 // vira tela de leitura em milissegundos com um cliente falando no ouvido.
 // Uma barra lateral ali é ruído. Ela pede foco, o menu some, e volta
 // quando desliga.
-export default function LayoutCrm({ children }: { children: React.ReactNode }) {
+export default async function LayoutCrm({ children }: { children: React.ReactNode }) {
+  const perfil = await perfilAtual();
+
   return (
     <FocoProvedor>
       <div className={estilo.casco}>
-        <MenuLateral />
+        <MenuLateral admin={perfil?.admin ?? false} />
         {/* Monta-se por portal dentro da #menu-sessao do MenuLateral, entao
             nao vira um no na grade do casco. */}
         <SessaoMenu />
