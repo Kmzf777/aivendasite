@@ -1,0 +1,82 @@
+.forma {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dupla {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 520px) {
+  .dupla { grid-template-columns: 1fr; }
+}
+
+.mono {
+  font-family: var(--fonte-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.caixinha {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  background: var(--vazio);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-p);
+  cursor: pointer;
+  font-size: 14px;
+}
+.caixinha input {
+  margin-top: 3px;
+  accent-color: var(--voce);
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.caixinha span { display: flex; flex-direction: column; gap: 2px; }
+.caixinha em {
+  font-style: normal;
+  font-size: 12.5px;
+  color: var(--tinta-fantasma);
+}
+
+/* Os campos opcionais ficam fechados para o caminho curto (nome + telefone)
+   ser o caminho visível. */
+.abrirMais {
+  align-self: flex-start;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--tinta-fraca);
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--linha-viva);
+  padding: 2px 0;
+  cursor: pointer;
+  transition: color 0.16s var(--mola);
+}
+.abrirMais:hover { color: var(--tinta); }
+
+.opcionais {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--linha);
+}
+
+.pe {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}

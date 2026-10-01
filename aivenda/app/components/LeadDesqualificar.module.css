@@ -1,0 +1,43 @@
+.forma {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.motivo {
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.5;
+  font-family: var(--fonte-ui), sans-serif;
+}
+
+.sugestoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.sugestao {
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--tinta-fraca);
+  background: var(--alto);
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  padding: 5px 11px;
+  cursor: pointer;
+  transition: color 0.16s var(--mola), border-color 0.16s var(--mola);
+}
+.sugestao:hover { color: var(--tinta); border-color: var(--linha-viva); }
+
+.pe {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
