@@ -97,10 +97,23 @@ function lerObjecoes() {
     if (Array.isArray(lista)) return lista;
     throw new Error("nao e array");
   } catch (e) {
-    // Primeira execução (ou arquivo corrompido): semeia com os 7 exemplos.
-    const { OBJECOES_EXEMPLO } = require("./lib/objecoes-exemplo.js");
-    fs.writeFileSync(ARQ_OBJ, JSON.stringify(OBJECOES_EXEMPLO, null, 2));
-    return OBJECOES_EXEMPLO;
+    // Primeira execução (ou arquivo corrompido): semeia.
+    //
+    // A semente é objecoes.padrao.json, o catálogo de verdade que vem no
+    // repositório. Os 7 de lib/objecoes-exemplo.js ficam só como último
+    // recurso: eles são de OUTRA oferta (agente de IA para pequena empresa) e
+    // hoje servem de fixture estável para teste-decisao.js — trocá-los por
+    // conteúdo de venda quebraria os testes e, pior, faria o vendedor abrir a
+    // call com argumento de um produto que a gente nem vende.
+    let semente;
+    try {
+      semente = JSON.parse(fs.readFileSync(path.join(RAIZ, "objecoes.padrao.json"), "utf8"));
+      if (!Array.isArray(semente) || !semente.length) throw new Error("padrao vazio");
+    } catch (_) {
+      semente = require("./lib/objecoes-exemplo.js").OBJECOES_EXEMPLO;
+    }
+    fs.writeFileSync(ARQ_OBJ, JSON.stringify(semente, null, 2));
+    return semente;
   }
 }
 
