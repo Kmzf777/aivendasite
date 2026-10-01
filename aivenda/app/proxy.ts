@@ -26,6 +26,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // `redirect`, que não existem no runtime do proxy. Importar de lá arrastaria
 // o módulo inteiro para cá e quebraria o build.
 const ROTA_LOGIN = "/login";
+const ROTA_CADASTRO = "/cadastro";
 const ROTA_INICIO = "/leads";
 
 // Lidas no topo do módulo: NEXT_PUBLIC_* são embutidas no build, não existe
@@ -33,8 +34,13 @@ const ROTA_INICIO = "/leads";
 const URL_SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const CHAVE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+// As duas portas que existem sem sessão. Quem já tem sessão e cai numa
+// delas é devolvido ao trabalho — ficar numa tela de entrar já estando
+// dentro só confunde.
 function ePublica(caminho: string): boolean {
-  return caminho === ROTA_LOGIN || caminho.startsWith(`${ROTA_LOGIN}/`);
+  return [ROTA_LOGIN, ROTA_CADASTRO].some(
+    (r) => caminho === r || caminho.startsWith(`${r}/`)
+  );
 }
 
 /**

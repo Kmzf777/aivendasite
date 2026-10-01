@@ -5,7 +5,7 @@ import estilo from "./login.module.css";
 
 export const metadata: Metadata = {
   title: "Entrar · Copiloto",
-  description: "Acesso ao copiloto de call. Por convite.",
+  description: "Acesso ao copiloto de call.",
 };
 
 // Esta tela é a primeira coisa que a pessoa vê todo dia, e o resto do produto
@@ -55,7 +55,7 @@ export default async function PaginaLogin({
             <dt className="rotulo">sessão</dt>
             <dd>cookie, renovada a cada requisição</dd>
             <dt className="rotulo">acesso</dt>
-            <dd>por convite — não há cadastro aberto</dd>
+            <dd>cadastro aberto — qualquer um cria conta</dd>
             <dt className="rotulo">dados</dt>
             <dd>cada lead protegido por RLS no banco</dd>
           </dl>

@@ -13,6 +13,8 @@ import {
 } from "@/app/(crm)/leads/acoes";
 import type { LeadDoPoco } from "@/lib/leadsExemplo";
 import LeadLinha from "./LeadLinha";
+import PlacarEquipe from "./PlacarEquipe";
+import type { Vendedor } from "@/app/(crm)/leads/carregar";
 import LeadDesqualificar from "./LeadDesqualificar";
 import NovoLeadModal from "./NovoLeadModal";
 import QualificarModal from "./QualificarModal";
@@ -22,13 +24,21 @@ type Props = {
   /** "universal" = a lista da equipe inteira; "meus" = só o que está na minha mão. */
   modo: "universal" | "meus";
   leads: LeadDoPoco[];
+  vendedores: Vendedor[];
   meuId: string | null;
   meuNome: string | null;
   /** True quando não há credenciais: o que está na tela é de mentira. */
   demonstracao?: boolean;
 };
 
-type Filtro = "sem_dono" | "meus" | "qualificados" | "em_contato" | "descartados" | "todos";
+type Filtro =
+  | "sem_dono"
+  | "com_dono"
+  | "meus"
+  | "qualificados"
+  | "em_contato"
+  | "descartados"
+  | "todos";
 type Ordem = "nota" | "avaliacoes" | "nome";
 type Aviso = { tom: "ok" | "erro"; texto: string; selo: number };
 type Modal =
@@ -51,7 +61,7 @@ function achatar(s: string) {
     .replace(/[̀-ͯ]/g, "");
 }
 
-export default function LeadsPoco({ modo, leads, meuId, meuNome, demonstracao = false }: Props) {
+export default function LeadsPoco({ modo, leads, vendedores, meuId, meuNome, demonstracao = false }: Props) {
   const universal = modo === "universal";
 
   // Na lista universal o filtro abre em "sem dono" de propósito: a tela
@@ -81,6 +91,7 @@ export default function LeadsPoco({ modo, leads, meuId, meuNome, demonstracao = 
 
     const porFiltro = leads.filter((l) => {
       if (filtro === "sem_dono") return !l.vendedor_id;
+      if (filtro === "com_dono") return Boolean(l.vendedor_id);
       if (filtro === "meus") return Boolean(meuId) && l.vendedor_id === meuId;
       if (filtro === "qualificados") return l.situacao === "qualificado";
       if (filtro === "em_contato") return l.situacao === "meu";
@@ -220,19 +231,15 @@ export default function LeadsPoco({ modo, leads, meuId, meuNome, demonstracao = 
           <div>
             <span className="rotulo">{universal ? "a equipe toda" : "na sua mão"}</span>
             <h1 className={estilo.titulo}>{universal ? "Lista de leads" : "Meus leads"}</h1>
-            <p className={estilo.lema}>
-              {universal ? (
-                <>
-                  Antes de ligar, <em>pegue o lead para si</em> — é assim que os outros vendedores
-                  sabem que você já está em cima dele. O que está apagado já tem dono.
-                </>
-              ) : (
-                <>
-                  O que você pegou. <em>Qualificar</em> aqui quer dizer uma coisa só: você
-                  conseguiu o contato de quem decide.
-                </>
-              )}
-            </p>
+            {/* Na lista da equipe o texto sai: a barra e o placar já dizem
+                tudo que ele dizia, e mais rápido. Em "meus leads" ele fica,
+                porque ali precisa explicar o que "qualificar" significa. */}
+            {!universal && (
+              <p className={estilo.lema}>
+                O que você pegou. <em>Qualificar</em> aqui quer dizer uma coisa só: você
+                conseguiu o contato de quem decide.
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -244,46 +251,52 @@ export default function LeadsPoco({ modo, leads, meuId, meuNome, demonstracao = 
           </button>
         </div>
 
-        {/* As fichas são o filtro E o placar. O número de "sem dono" é o
-            maior da tela porque é a pergunta que a tela faz. */}
-        <div className={estilo.placar}>
-          {fichas.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              className={estilo.ficha}
-              data-ativo={filtro === f.id}
-              data-tom={f.tom ?? "neutro"}
-              data-grande={f.id === "sem_dono"}
-              onClick={() => setFiltro(f.id)}
-              aria-pressed={filtro === f.id}
-            >
-              <strong>{f.n}</strong>
-              <span className="rotulo">{f.nome}</span>
-              <em>{f.dica}</em>
-            </button>
-          ))}
-        </div>
+        {/* Na lista da equipe, a hero é UMA barra e o placar de quem está
+            produzindo. As quatro fichas gigantes mais três parágrafos que
+            havia aqui respondiam a mesma pergunta quatro vezes — e texto
+            explicativo não gamifica nada.
 
-        {/* A régua mede POSSE: sem dono, seus, dos outros. Só existe na lista
-            da equipe — em "meus leads" as três fatias seriam uma só, e uma
-            barra de cor única não informa nada. */}
-        {universal && (
-        <div className={estilo.regua} aria-hidden>
-          <span className={estilo.fatia} data-tom="sinal" style={{ width: `${pct(conta.semDono)}%` }} />
-          <span className={estilo.fatia} data-tom="voce" style={{ width: `${pct(conta.meus)}%` }} />
-          <span className={estilo.fatia} data-tom="outro" style={{ width: `${pct(conta.deOutros)}%` }} />
-        </div>
+            Em "meus leads" as fichas continuam: ali elas não competem com
+            placar nenhum e são o filtro da própria tela. */}
+        {universal ? (
+          <PlacarEquipe
+            semDono={conta.semDono}
+            meus={conta.meus}
+            deOutros={conta.deOutros}
+            total={conta.total}
+            vendedores={vendedores}
+            meuId={meuId}
+            filtro={filtro}
+            aoFiltrar={(f) => setFiltro(f)}
+          />
+        ) : (
+          <>
+            <div className={estilo.placar}>
+              {fichas.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  className={estilo.ficha}
+                  data-ativo={filtro === f.id}
+                  data-tom={f.tom ?? "neutro"}
+                  onClick={() => setFiltro(f.id)}
+                  aria-pressed={filtro === f.id}
+                >
+                  <strong>{f.n}</strong>
+                  <span className="rotulo">{f.nome}</span>
+                  <em>{f.dica}</em>
+                </button>
+              ))}
+            </div>
+            <p className={estilo.legenda}>
+              <span className="telemetria">
+                {conta.total} {conta.total === 1 ? "lead seu" : "leads seus"}
+                {conta.descartados > 0 && ` · ${conta.descartados} descartados`}
+                {meuNome && ` · você é ${meuNome}`}
+              </span>
+            </p>
+          </>
         )}
-        <p className={estilo.legenda}>
-          <span className="telemetria">
-            {universal
-              ? `${conta.semDono} de ${conta.total} sem dono`
-              : `${conta.total} ${conta.total === 1 ? "lead seu" : "leads seus"}`}
-            {conta.descartados > 0 && ` · ${conta.descartados} descartados`}
-            {meuNome && ` · você é ${meuNome}`}
-          </span>
-        </p>
 
         <div className={estilo.controles}>
           <input
