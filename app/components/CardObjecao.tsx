@@ -7,70 +7,30 @@ type Props = {
   card: Card;
 };
 
-// O card é a única coisa acesa na tela. Três camadas, nesta ordem:
+// Uma frase, centralizada. Nada mais.
 //
-//   nome      -> que objeção é (identificação, corpo pequeno);
-//   deixa     -> a headline, a versão curta (basta numa olhada rápida);
-//   ARGUMENTO -> o que o vendedor vai FALAR. É o maior corpo da tela;
-//   pivot     -> a regra que evita o erro clássico (--sinal, com alerta).
+// As versões anteriores empilhavam nome, deixa, confiança, pivot e tempo.
+// Cada um defensável sozinho, e juntos um parágrafo de formulário numa tela
+// que tem milissegundos para ser lida. O vendedor não vai conferir
+// porcentagem com um cliente falando no ouvido: ou ele bate o olho e fala,
+// ou o card falhou.
 //
-// A primeira versão escondia o argumento atrás de uma tecla e promovia a
-// headline. Estava errado: o argumento é o texto que contorna a objeção,
-// e é a primeira coisa que o vendedor procura. A headline costuma ser um
-// pedaço dele, então servia de resumo e não de substituto.
+// O que foi cortado e por quê:
+//   nome da objeção  -> o argumento já diz de que se trata;
+//   confiança e ms   -> telemetria de quem depura, não de quem vende;
+//   pivot            -> é regra de treino, não fala de call;
+//   caixa e borda    -> moldura não é conteúdo.
 export default function CardObjecao({ card }: Props) {
-  const alerta = card.tipo === "alerta";
-  const pct = Math.round(card.confianca * 100);
+  const texto = card.argumento || card.headline || card.falaCliente || "";
+  if (!texto) return null;
 
   return (
-    // A animação de acender depende de este nó ser NOVO a cada decisão.
-    // Quem garante isso é a `key` no ponto de uso (app/coldcall/page.tsx),
-    // não uma key aqui dentro — essa não remontaria nada.
-    <article className={`${estilo.card} ${alerta ? estilo.alerta : ""}`}>
-      <div className={estilo.fio} aria-hidden />
-
-      <header className={estilo.topo}>
-        <h2 className={`rotulo ${estilo.nome}`}>{card.rotulo}</h2>
-        <span className={estilo.medida}>
-          <span className={estilo.numero}>{pct}</span>
-          <i>%</i>
-        </span>
-      </header>
-
-      {/* A deixa, curta. Fica ACIMA do argumento porque numa olhada de meio
-          segundo ela basta; quem precisa do texto inteiro lê a linha de
-          baixo. A headline costuma ser um pedaço do próprio argumento. */}
-      {card.headline && <p className={estilo.deixa}>{card.headline}</p>}
-
-      {/* O argumento é o que o vendedor vai FALAR para contornar, então é
-          ele que ocupa a linha mais nobre e o maior corpo. Foi o que a
-          primeira versão errou: escondia atrás de uma tecla justamente o
-          texto que resolve a objeção. */}
-      {card.argumento ? (
-        <p className={estilo.argumento}>{card.argumento}</p>
-      ) : (
-        <p className={estilo.semArg}>Sem argumento escrito para esta objeção.</p>
-      )}
-
-      {card.pivot && (
-        <>
-          <div className={estilo.regua} aria-hidden />
-          <p className={estilo.pivot}>
-            <span className={estilo.glifo} aria-hidden>
-              &#9888;
-            </span>
-            {card.pivot}
-          </p>
-        </>
-      )}
-
-      {alerta && card.falaCliente && (
-        <p className={estilo.fala}>&ldquo;{card.falaCliente}&rdquo;</p>
-      )}
-
-      <footer className={estilo.pe}>
-        <span className={`telemetria ${estilo.ms}`}>{card.ms} ms</span>
-      </footer>
-    </article>
+    // A animação de entrada depende de este nó ser NOVO a cada decisão.
+    // Quem garante é a `key` no ponto de uso, não uma key aqui dentro.
+    // Sem ela, trocar de objeção não daria sinal nenhum de mudança — e sem
+    // nome nem borda, a entrada é o ÚNICO aviso de que o card é outro.
+    <p className={`${estilo.fala} ${card.tipo === "alerta" ? estilo.semScript : ""}`}>
+      {texto}
+    </p>
   );
 }
