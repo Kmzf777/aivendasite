@@ -116,6 +116,8 @@ export default function Kanban({ iniciais, vendedorId, demonstracao }: Props) {
     focoPendente.current = { alvo, cartao: idCartao };
   }, []);
 
+  // Roda depois de qualquer commit que mexa no quadro ou no painel: é quando
+  // o nó de destino do foco já existe no DOM.
   useEffect(() => {
     const pedido = focoPendente.current;
     if (!pedido) return;
@@ -125,7 +127,7 @@ export default function Kanban({ iniciais, vendedorId, demonstracao }: Props) {
     // recebe foco: nesse caso o título do cartão segura a pessoa no lugar.
     if (el instanceof HTMLButtonElement && !el.disabled) el.focus();
     else document.getElementById(`cartao-${pedido.cartao}`)?.focus();
-  }, [cartoes]);
+  }, [cartoes, aberto]);
 
   const mover = useCallback(
     async (id: string, destino: Etapa, focoApos?: string) => {
@@ -326,15 +328,11 @@ export default function Kanban({ iniciais, vendedorId, demonstracao }: Props) {
   const fechar = useCallback(() => {
     const anterior = refAberto.current;
     refAberto.current = null;
-    setAberto(null);
     // O foco volta para o cartão que abriu o painel. Sem isto quem navega
     // por teclado é devolvido ao início do documento a cada fechamento.
-    if (anterior) {
-      window.requestAnimationFrame(() =>
-        document.getElementById(`cartao-${anterior}`)?.focus()
-      );
-    }
-  }, []);
+    if (anterior) devolverFoco(`cartao-${anterior}`, anterior);
+    setAberto(null);
+  }, [devolverFoco]);
 
   // ------------------------------------------------------------ contas
 

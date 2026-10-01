@@ -110,8 +110,12 @@
   box-shadow: -24px 0 60px rgba(0, 0, 0, .55);
 }
 
-@media (min-width: 1500px) {
-  .area[data-painel="sim"] { grid-template-columns: minmax(0, 1fr) 380px; }
+/* 1660px não é número mágico: é a largura a partir da qual sobra, depois do
+   menu (236px), do respiro (40px) e do painel (360px), mais do que a largura
+   mínima das cinco colunas (938px). Docar o painel antes disso trocaria uma
+   camada temporária por rolagem horizontal permanente — pior negócio. */
+@media (min-width: 1660px) {
+  .area[data-painel="sim"] { grid-template-columns: minmax(0, 1fr) 360px; }
   .doca {
     position: relative;
     inset: auto;
