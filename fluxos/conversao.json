@@ -1,0 +1,172 @@
+{
+  "id": "conversao",
+  "nome": "Vender a página",
+  "objetivo": "Sair da ligação com o sim do dono e o pagamento já feito, sem prometer resultado nenhum.",
+
+  "acoes": [
+    {
+      "id": "confirmou_que_e_o_dono",
+      "comoSoa": "The seller greets and checks that the person who picked up is the decision maker he came for, saying that person's name out loud and waiting for a yes. He is confirming WHO IS ON THE LINE. He is NOT giving his own name, is NOT saying where the number came from, and is NOT stating why he called.",
+      "dica": "Confirme se é ele mesmo"
+    },
+    {
+      "id": "disse_o_proprio_nome",
+      "comoSoa": "The seller introduces himself by his own first name, so the other side knows who is speaking. He is naming HIMSELF. He is NOT checking who answered, is NOT warning about any name that will show up in a payment later, and is NOT mentioning the university.",
+      "dica": "Diga seu nome"
+    },
+    {
+      "id": "disse_quem_passou_o_numero",
+      "comoSoa": "The seller says the name of the employee who gave him this number earlier, accounting for how he got it. He is crediting a PERSON INSIDE THE BUSINESS. He is NOT introducing himself, is NOT asking for any number, and is NOT claiming he found the contact on the internet.",
+      "dica": "Diga quem passou o número"
+    },
+    {
+      "id": "avisou_que_vai_ser_direto",
+      "comoSoa": "The seller announces that he will be quick and go straight to the point, buying a few seconds of patience before he explains anything. He is making a PROMISE ABOUT THE LENGTH of the call. He is NOT describing what he sells, is NOT mentioning what he studies, and is NOT asking any question.",
+      "dica": "Avise que vai ser direto"
+    },
+    {
+      "id": "disse_que_e_aluno_da_ufu",
+      "comoSoa": "The seller states that he and his friends are students at UFU, the federal university of this city. He is saying WHAT HE IS. He is NOT explaining what the money is for, is NOT giving his first name, and is NOT quoting any amount.",
+      "dica": "Diga que é aluno da UFU"
+    },
+    {
+      "id": "disse_que_junta_para_a_startup",
+      "comoSoa": "The seller explains that the money from this work is being raised to build an artificial intelligence startup of their own, and that websites are how they fund it. He is giving the PURPOSE OF THE MONEY. He is NOT merely saying where he studies, is NOT naming any amount, and is NOT describing the page.",
+      "dica": "Conte da startup de IA"
+    },
+    {
+      "id": "perguntou_o_que_tem_hoje",
+      "comoSoa": "The seller asks what the business has on the internet today — whether it has a website of its own or only an Instagram profile, or, if a site does exist, when it was last updated. He is asking about WHAT ALREADY EXISTS. He is NOT asking how customers find the business, is NOT describing anything he would build, and is NOT quoting a price.",
+      "dica": "Pergunte se já tem site"
+    },
+    {
+      "id": "perguntou_como_chega_cliente",
+      "comoSoa": "The seller asks through which route new customers reach the business right now, offering options such as word of mouth, social media, or walking past the door. He is asking about the ROUTE OF ARRIVAL. He is NOT asking whether a website exists, is NOT presenting any offer, and is NOT naming any amount.",
+      "dica": "Pergunte como chega cliente novo"
+    },
+    {
+      "id": "descreveu_a_pagina",
+      "comoSoa": "The seller describes, in concrete items, what will be visible on the page: the business name at the top, a green WhatsApp button, the services, the address with a map, the opening hours, some photos. He is listing WHAT APPEARS ON SCREEN. He is NOT listing what the client keeps afterwards, is NOT naming a price, and is NOT promising any result.",
+      "dica": "Descreva a página em itens"
+    },
+    {
+      "id": "disse_o_preco",
+      "comoSoa": "Asked how much it costs, the seller answers with one single figure in reais and stops, never a range and never two numbers. He is NAMING THE AMOUNT for the first time. He is NOT asking anybody to pay anything, is NOT arranging any transfer, and is NOT explaining the terms of payment.",
+      "dica": "Diga um número só"
+    },
+    {
+      "id": "disse_que_e_pagamento_unico",
+      "comoSoa": "The seller makes the terms explicit: the amount is paid a single time, with no monthly fee and no contract. He is killing the SUSPICION OF A HIDDEN SUBSCRIPTION. He is NOT stating the figure itself, is NOT requesting the transfer, and is NOT talking about deadlines.",
+      "dica": "Diga que não tem mensalidade"
+    },
+    {
+      "id": "disse_o_que_vai_junto",
+      "comoSoa": "The seller lists what the client ends up owning for that amount: the page online with its own internet address, the files handed over to keep, and a step by step document for changing things. He is listing WHAT THE CLIENT KEEPS. He is NOT describing the sections drawn on the page, is NOT quoting the amount, and is NOT asking for material.",
+      "dica": "Diga o que vai junto"
+    },
+    {
+      "id": "pediu_o_pagamento",
+      "comoSoa": "The seller asks the other side to pay now, closing with a question that has only two possible answers, yes or no, so a decision has to be made on this call. He is REQUESTING THE DECISION AND THE MONEY. He is NOT answering a question about cost, is NOT explaining that there is no monthly fee, and is NOT announcing the key he will send.",
+      "dica": "Peça o pagamento e fique calado"
+    },
+    {
+      "id": "disse_que_manda_o_pix",
+      "comoSoa": "The seller states what he is about to do himself: send the Pix payment key over right now so the work can start. He is announcing HIS OWN NEXT MOVE, a mechanical step. He is NOT asking for a decision, is NOT naming the amount, and is NOT confirming that anything arrived.",
+      "dica": "Mande a chave Pix agora"
+    },
+    {
+      "id": "avisou_o_nome_do_pix",
+      "comoSoa": "Before the other side sees it, the seller warns which name will show up attached to the payment key, so it does not look like a stranger's. He is preventing a SURPRISE ON THE BANK SCREEN. He is NOT introducing himself at the start of a call, is NOT asking for payment, and is NOT saying money arrived.",
+      "dica": "Avise o nome que aparece"
+    },
+    {
+      "id": "confirmou_que_recebeu",
+      "comoSoa": "The seller says out loud that the money has landed, and thanks, so the other side knows the transfer worked. He is ACKNOWLEDGING ARRIVAL of the payment. He is NOT asking for payment, is NOT warning about any name, and is NOT setting a deadline.",
+      "dica": "Diga que recebeu o dinheiro"
+    },
+    {
+      "id": "disse_que_o_prazo_conta_do_material",
+      "comoSoa": "The seller explains that the twenty four hours start counting only when the last piece of material arrives from the client, never from the end of the call. He is anchoring the CLOCK TO THE CLIENT'S DELIVERY. He is NOT asking for the material, is NOT promising a fixed day, and is NOT describing what the page will contain.",
+      "dica": "Diga que 24h contam do material"
+    },
+    {
+      "id": "mandou_a_lista_no_whatsapp",
+      "comoSoa": "With the call still live, the seller says he is sending over the numbered list of items he needs in order to build: name, address, hours, services, photos. He is DELIVERING THE REQUEST FOR MATERIAL. He is NOT sending a payment key, is NOT explaining how the deadline is counted, and is NOT telling anybody which number to call.",
+      "dica": "Mande a lista ainda na ligação"
+    },
+    {
+      "id": "disse_que_ele_fala_nesse_numero",
+      "comoSoa": "The seller tells the other side to come straight to him on this same number with any doubt, and that it is him who answers there. He is opening a DIRECT CHANNEL FOR LATER. He is NOT sending any list, is NOT asking for information, and is NOT naming any amount.",
+      "dica": "Diga que você atende nesse número"
+    }
+  ],
+
+  "etapas": [
+    {
+      "id": "alo",
+      "nome": "Alô",
+      "comoSoa": "The call has just been answered and the only thing being settled is who is holding each end of the line, and how this number was come by. Nothing about money, product or the university has come up.",
+      "exige": ["confirmou_que_e_o_dono", "disse_o_proprio_nome", "disse_quem_passou_o_numero"]
+    },
+    {
+      "id": "gancho_ufu",
+      "nome": "O gancho da UFU",
+      "comoSoa": "The caller is laying out who he is and why he is calling at all: the students, and the money they are putting together. No amount and no product detail have appeared yet.",
+      "exige": ["avisou_que_vai_ser_direto", "disse_que_e_aluno_da_ufu", "disse_que_junta_para_a_startup"]
+    },
+    {
+      "id": "diagnostico",
+      "nome": "O que ele tem hoje",
+      "comoSoa": "The talk has turned to the business itself: what it already has on the internet and how its customers arrive. Questions are being asked and answered, and nothing has been offered.",
+      "exige": ["perguntou_o_que_tem_hoje", "perguntou_como_chega_cliente"]
+    },
+    {
+      "id": "apresentacao",
+      "nome": "A página",
+      "comoSoa": "The work being offered is being described: what the page will look like on screen, item by item. No figure has been said out loud yet.",
+      "exige": ["descreveu_a_pagina"]
+    },
+    {
+      "id": "preco",
+      "nome": "O preço",
+      "comoSoa": "Cost is now the subject: how much the work is, under what terms it is charged, and what the client ends up owning for it. The money has not been requested yet and nobody has agreed to anything.",
+      "exige": ["disse_o_preco", "disse_que_e_pagamento_unico", "disse_o_que_vai_junto"]
+    },
+    {
+      "id": "pedido_de_pagamento",
+      "nome": "Pedir o dinheiro",
+      "comoSoa": "The other side has shown he wants it, and what is on the table is the transfer itself: paying now, on this call, and how the key gets there. Nothing has been paid yet.",
+      "exige": ["pediu_o_pagamento", "disse_que_manda_o_pix", "avisou_o_nome_do_pix"]
+    },
+    {
+      "id": "recebido",
+      "nome": "Recebido",
+      "comoSoa": "The transfer has just gone through and both sides are checking that it landed. Money is no longer in question.",
+      "exige": ["confirmou_que_recebeu"]
+    },
+    {
+      "id": "prazo",
+      "nome": "O prazo",
+      "comoSoa": "The subject is time: when the page goes online and from which moment the clock is counted.",
+      "exige": ["disse_que_o_prazo_conta_do_material"]
+    },
+    {
+      "id": "material",
+      "nome": "O material",
+      "comoSoa": "The call is closing around what the client has to send over so the building can begin, and how the two stay in touch from here.",
+      "exige": ["mandou_a_lista_no_whatsapp", "disse_que_ele_fala_nesse_numero"]
+    }
+  ],
+
+  "notas": [
+    "Ordem conferida contra o curso 2 (mapas/conteudo/curso-2-vender-o-site.json, módulo 10, a ligação em 8 passos): alô, gancho da UFU, o que ele tem hoje, a página, o preço, o dinheiro, o prazo, a lista. A etapa recebido é o 'recebi, obrigado' do módulo 6, que o curso manda dizer em voz alta antes de emendar na lista.",
+    "A regra que manda na ordem, literal do curso: 'o gancho da UFU vem antes do preço'. Por isso gancho_ufu é etapa 2 e nenhuma ação de dinheiro aparece antes de preco.",
+    "disse_o_que_vai_junto saiu de apresentacao e foi para preco. No curso o que vai junto (a página no ar, o passo a passo, os arquivos) é a terceira frase da oferta, colada no número: 'São R$ 300, pago uma vez, sem mensalidade. Entrego ela no ar, com um passo a passo e os arquivos pra você guardar.' É essa lista que faz ele parar de procurar a pegadinha, e ela só serve no instante em que o preço cai. O módulo 4, que é a etapa apresentacao, descreve a tela e nada mais.",
+    "Saiu a ação perguntou_se_da_conta (a pergunta de capacidade, 'se chegarem dez clientes novos vocês encaixam?'). Ela é do mapa antigo mapas/02-conversao.md, onde era o portão da ligação. O curso 2 não a tem: o módulo 3 são DUAS perguntas, quarenta segundos, e o aviso do módulo é justamente que falar demais aqui entrega objeção de graça. Exigir uma terceira pergunta era dica nagging fora do curso.",
+    "Pares de comoSoa que considerei perigosos. (1) disse_o_proprio_nome × disse_que_e_aluno_da_ufu: as duas são apresentação e caem a vinte segundos uma da outra — resolvido com NOT cruzado (uma não menciona a universidade, a outra não dá o primeiro nome). (2) disse_o_proprio_nome × avisou_o_nome_do_pix: as duas falam do nome dele; a segunda diz explicitamente que não é apresentação de começo de ligação. (3) disse_o_preco × disse_que_e_pagamento_unico × pediu_o_pagamento: no curso o pedido do dinheiro REPETE o valor ('São R$ 250, pago uma vez. Te mando a chave Pix agora... pode ser?'), então uma fala só pode parecer três ações. As três têm cláusula NOT dizendo o que não são, e se o vendedor despejar tudo numa respiração o Jev tira a conversa de preco sugerindo pedido_de_pagamento, que é o jeito que a máquina tem de pular.",
+    "(4) disse_que_manda_o_pix × mandou_a_lista_no_whatsapp: as duas são 'eu te mando agora'. O que separa é o objeto, chave de pagamento contra lista de material, e cada comoSoa nega o outro.",
+    "Par entre arquivos: pedir o WhatsApp não se repete aqui. Na prospecção existem perguntou_se_atende_no_whats e perguntou_o_whats_da_loja porque o canal ainda não existe; nesta ligação o WhatsApp dele já está na mão desde a parte 1, então o que sobra é usar o canal — mandou_a_lista_no_whatsapp e disse_que_ele_fala_nesse_numero. Não é lacuna, é consequência da ordem das duas ligações.",
+    "disse_que_junta_para_a_startup é o id único para a frase da startup nos dois fluxos; na prospecção ela não é exigida por etapa nenhuma porque lá o curso a trata como resposta condicional.",
+    "O que ficou fora de propósito: as dez objeções do módulo 7, o 'não insistir' do módulo 9 e o 'boa pergunta, não vou chutar' são cards de objeção e stop, que entram na tela por outra fonte (lib/dicas.js dá precedência a stop e objeção acima de lacuna). Preço em número e faixa não entram no catálogo: o vendedor escolhe o número no papel antes de discar."
+  ]
+}

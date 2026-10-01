@@ -159,5 +159,4 @@ function dominancia(amostras, de, ate) {
   return { voce: sV / tot, cliente: sC / tot, razao: sV > sC ? (sC ? sV / sC : Infinity) : (sV ? sC / sV : Infinity) };
 }
 
-
 export { ATRIB, TECLA, quemFalou, quemFalouPorTecla, fracaoApertada, quemFalouPorTransicoes, dominancia };

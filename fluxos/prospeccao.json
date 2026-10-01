@@ -1,0 +1,167 @@
+{
+ "id": "prospeccao",
+ "nome": "Achar o dono",
+ "objetivo": "Sair da ligação com o nome e o WhatsApp do dono escritos no papel, sem vender nada.",
+ "acoes": [
+  {
+   "id": "confirmou_o_lugar",
+   "comoSoa": "The seller opens the call with a greeting and checks that he reached the right business, saying the name of the business back and waiting for a yes. He is only confirming WHERE he called. He is NOT asking any person's name, is NOT saying who he is, and is NOT stating why he called.",
+   "dica": "Cumprimente e confirme o lugar"
+  },
+  {
+   "id": "perguntou_o_nome_dela",
+   "comoSoa": "The seller asks the name of the person who is on the line with him right now, the one who picked up the phone. He is NOT asking for the name of the absent owner or boss, is NOT giving his own name, and is NOT asking for the name of the business.",
+   "dica": "Pergunte o nome de quem atendeu"
+  },
+  {
+   "id": "se_apresentou_com_a_ufu",
+   "comoSoa": "The seller introduces himself: he gives his own first name and says he is a student at UFU, the local federal university. He is stating WHO HE IS. He is NOT explaining the startup or the money, is NOT saying where he found the phone number, and is NOT asking anything.",
+   "dica": "Diga seu nome e a UFU"
+  },
+  {
+   "id": "disse_de_onde_veio_o_contato",
+   "comoSoa": "The seller volunteers, before anyone challenges him, that he found this phone number on Google, in the business listing on the internet. He is accounting for HOW HE GOT THE NUMBER. He is NOT introducing himself, is NOT explaining what he sells, and is NOT asking for permission or for time.",
+   "dica": "Diga que achou no Google"
+  },
+  {
+   "id": "cravou_o_tempo",
+   "comoSoa": "The seller pins the length of the call to a number out loud — he says he has a one-minute matter, or asks for a minute — and then stops talking and waits. He is asking PERMISSION with a fixed duration attached. He is NOT saying where the number came from, is NOT describing the product, and is NOT asking who decides.",
+   "dica": "Peça um minuto e pare"
+  },
+  {
+   "id": "perguntou_quem_decide",
+   "comoSoa": "The seller asks who is responsible for the website inside the business — whether that is the person on the line or somebody else. He is sorting out WHO CAN SAY YES. He is NOT asking for anybody's name, is NOT asking for a phone number or a time, and is NOT describing what he sells.",
+   "dica": "Pergunte quem cuida do site"
+  },
+  {
+   "id": "perguntou_o_nome_do_dono",
+   "comoSoa": "The seller asks what the absent owner, boss or decision maker is called. He wants that person's NAME. He is NOT asking the name of the person who answered the phone, is NOT asking who is responsible for anything, and is NOT asking for a number or a time of day.",
+   "dica": "Pergunte o nome do dono"
+  },
+  {
+   "id": "perguntou_o_melhor_horario",
+   "comoSoa": "The seller asks what time of day is best to reach the owner, or when the owner is usually at the business. He wants a TIME to call back. He is NOT asking for any phone number, is NOT asking anybody's name, and is NOT asking who is in charge.",
+   "dica": "Pergunte o melhor horário dele"
+  },
+  {
+   "id": "perguntou_se_atende_no_whats",
+   "comoSoa": "The seller asks whether the owner himself can be reached on WhatsApp, or asks for the owner's own mobile number. The question is about the ABSENT DECISION MAKER'S personal channel. He is NOT asking about the number he dialed, is NOT offering to send anything for somebody to pass along, and is NOT announcing a message of his own.",
+   "dica": "Pergunte se ele atende WhatsApp"
+  },
+  {
+   "id": "ofereceu_levar_o_recado",
+   "comoSoa": "The seller drops the attempt to get the owner's number and instead proposes that the person on the line FORWARD something to the owner for him — he suggests sending it to her so she passes it on, and asks whether that works. He is recruiting her as a messenger. He is NOT asking whether any number has WhatsApp, is NOT asking for the owner's contact details, and is NOT saying goodbye.",
+   "dica": "Peça para ela encaminhar"
+  },
+  {
+   "id": "perguntou_o_whats_da_loja",
+   "comoSoa": "The seller asks whether the very number he dialed has WhatsApp, so that he can write to THIS line. The question is about the channel of the phone in front of her. He is NOT asking about the owner's personal number, is NOT asking anybody to pass a message to the owner, and is NOT yet announcing that he will write.",
+   "dica": "Pergunte se esse número tem WhatsApp"
+  },
+  {
+   "id": "agradeceu_a_ajuda",
+   "comoSoa": "The seller thanks the person on the line for helping him and tells her he will call back at the moment she pointed out. He is giving her credit as the call winds down. He is NOT announcing any message he will send, is NOT asking for anything new, and is NOT apologising for having called.",
+   "dica": "Agradeça a ajuda dela"
+  },
+  {
+   "id": "prometeu_o_oi_no_whats",
+   "comoSoa": "On the way out, the seller announces that he will send a quick hello on WhatsApp now so that his own contact stays saved on their phone. He is announcing HIS OWN outgoing message as a goodbye. He is NOT asking a question about any number, is NOT asking anybody to forward anything, and is NOT thanking her for her help.",
+   "dica": "Avise que vai mandar oi"
+  }
+ ],
+ "etapas": [
+  {
+   "id": "alo",
+   "nome": "O alô",
+   "comoSoa": "The call has only just connected and neither side has said who they are: greetings are being traded and the one thing on the table is whether this is the right business.",
+   "exige": [
+    "confirmou_o_lugar"
+   ]
+  },
+  {
+   "id": "nome_dela",
+   "nome": "O nome de quem atendeu",
+   "comoSoa": "The business has been confirmed and the talk is about who is holding the phone on the other side: the name of the person who answered.",
+   "exige": [
+    "perguntou_o_nome_dela"
+   ]
+  },
+  {
+   "id": "apresentacao",
+   "nome": "A apresentação",
+   "comoSoa": "Identity is being established on the caller's side: who he is, how this number was found, and how long he says this will take. Nothing has been asked for yet and no product has been mentioned.",
+   "exige": [
+    "se_apresentou_com_a_ufu",
+    "disse_de_onde_veio_o_contato",
+    "cravou_o_tempo"
+   ]
+  },
+  {
+   "id": "triagem",
+   "nome": "A triagem",
+   "comoSoa": "The subject has been named and the conversation has turned to who inside the business looks after the website, and whether that happens to be the person on the line.",
+   "exige": [
+    "perguntou_quem_decide"
+   ]
+  },
+  {
+   "id": "pedido_do_contato",
+   "nome": "O pedido, em três degraus",
+   "comoSoa": "It is settled that the decision maker is somebody else, and the talk is now about how to reach that person: what he is called, when he is around, which number answers.",
+   "exige": [
+    "perguntou_o_nome_do_dono",
+    "perguntou_o_melhor_horario",
+    "perguntou_se_atende_no_whats"
+   ]
+  },
+  {
+   "id": "saida_a",
+   "nome": "Saída A: ela leva o recado",
+   "comoSoa": "The owner's own contact has been withheld, and what is on the table is whether the person on the line will carry something to him herself.",
+   "exige": [
+    "ofereceu_levar_o_recado"
+   ],
+   "pula_se": [
+    "telefone_citado"
+   ]
+  },
+  {
+   "id": "saida_b",
+   "nome": "Saída B: o WhatsApp da loja",
+   "comoSoa": "Reaching the owner directly has been given up on, and the subject is the channel of the very phone that was dialled: whether this line takes WhatsApp.",
+   "exige": [
+    "perguntou_o_whats_da_loja"
+   ],
+   "pula_se": [
+    "telefone_citado"
+   ]
+  },
+  {
+   "id": "aquecer",
+   "nome": "Agradecer a quem atendeu",
+   "comoSoa": "The asking is over and the caller is crediting by name the person who helped him, and saying he will call back at the time she gave him.",
+   "exige": [
+    "agradeceu_a_ajuda"
+   ]
+  },
+  {
+   "id": "encerramento",
+   "nome": "O encerramento",
+   "comoSoa": "Goodbyes are being said and the only thing left is the message the caller will send himself, so that his contact stays saved on their phone.",
+   "exige": [
+    "prometeu_o_oi_no_whats"
+   ]
+  }
+ ],
+ "notas": [
+  "Ordem conferida contra o curso 1 (mapas/conteudo/curso-1-achar-o-dono.json, módulo 10, a ligação em 11 momentos): alô, nome dela, apresentação, triagem, três degraus, saída A, saída B, agradecer, encerrar. As etapas daqui são essas, uma por momento, com os três degraus numa etapa só.",
+  "cravou_o_tempo voltou para dentro de apresentacao. No curso é a MESMA fala: 'meu nome é Lucas, sou aluno da UFU. Achei o contato no Google. Tenho um assunto de um minuto.' — três peças e nada mais, e o aviso é 'pare depois de um minuto'. Ter o tempo numa etapa depois do gancho ensinava exatamente o erro que o curso chama de clássico: emendar o pitch antes de pedir permissão.",
+  "Saiu a ação disse_a_startup. No curso 1 a frase da startup é condicional ('se ela puxar assunto e perguntar mais, você tem uma frase a mais'), não é peça da apresentação, e explicar o motivo do dinheiro para quem não decide é o erro que o curso 1 existe para impedir. Ela continua existindo no outro fluxo, como disse_que_junta_para_a_startup — ter dois ids para a mesma fala era a colisão mais cara entre os dois arquivos.",
+  "Também é por isso que apresentacao ficou com três exigências e não quatro: o teto de dicas em tela é 3 (lib/dicas.js), então uma quarta lacuna na mesma etapa sumiria sem aviso.",
+  "plano_b virou saida_a e saida_b, duas etapas. No curso são duas saídas alternativas ('você tenta a primeira, e se ela não der, tenta a segunda') e só a segunda acontece nas duas. Juntas numa etapa só, a ligação que nunca passou pelo recado ficava presa pedindo recado; separadas, o Jev pula saida_a para frente com sugerirEtapa e a dica do recado não aparece fora de hora.",
+  "Pares de comoSoa que considerei perigosos e deixei com cláusula NOT explícita: perguntou_o_nome_dela × perguntou_o_nome_do_dono (dois nomes na mesma ligação); perguntou_se_atende_no_whats × perguntou_o_whats_da_loja (dois WhatsApp, o do dono e o do balcão); ofereceu_levar_o_recado × perguntou_o_whats_da_loja (acontecem em sequência na saída A); agradeceu_a_ajuda × prometeu_o_oi_no_whats (as duas fecham a ligação, uma olha para trás e a outra para frente).",
+  "Par entre arquivos que NÃO uniformizei, de propósito: se_apresentou_com_a_ufu aqui empacota nome e UFU numa peça só porque o curso 1 as diz numa respiração; no fluxo de conversão são duas ações (disse_o_proprio_nome no alô e disse_que_e_aluno_da_ufu vinte segundos depois) porque o curso 2 as separa. São momentos diferentes e os dois fluxos nunca são carregados juntos.",
+  "disse_de_onde_veio_o_contato é o oposto do que o curso 2 manda dizer ao dono ('nunca diga que achou no Google'). Está certo assim: aqui o número é o da loja, público no Google; lá é o WhatsApp pessoal, que veio de quem atendeu.",
+  "O que ficou fora de propósito: as quatro linhas que o vendedor ESCREVE no papel (módulo 9) não são ação, porque o Jev só ouve fala; preço perguntado pelo balcão (módulo 8) e os cortes de quem atende (módulo 7) são cards de objeção, não lacuna de etapa."
+ ]
+}

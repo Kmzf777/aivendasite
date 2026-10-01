@@ -165,7 +165,6 @@ function calcularCusto(usage) {
   return usage.input_tokens / 1e6 * CONFIG.usdPorMilhaoInput;
 }
 
-
 // ==================================================================
 // Limiares salvos pela tela /objecoes
 // ==================================================================
