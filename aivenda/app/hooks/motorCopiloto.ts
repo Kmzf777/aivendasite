@@ -734,6 +734,7 @@ export class MotorCopiloto {
     // Marca o início da fala no domínio do ÁUDIO, não no da rede. É o
     // melhor ancoradouro que existe para a janela de atribuição.
     r.onspeechstart = () => {
+      this.marcar("fala começou (onspeechstart)");
       if (!this.tInicioFrase) this.tInicioFrase = Date.now();
     };
 
@@ -812,6 +813,18 @@ export class MotorCopiloto {
   // e a regra libera o card mesmo com mais palavras vindo atrás.
   // ----------------------------------------------------------------
   private aoResultado(ev: EventoSR) {
+    {
+      // Quantos parciais o Chrome entrega ANTES do final? É o número que
+      // decide se dá para responder durante a fala ou se somos reféns do
+      // endpointing dele.
+      let fin = 0, parc = 0, tam = 0;
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const alt = ev.results[i][0];
+        tam = Math.max(tam, (alt?.transcript || "").trim().length);
+        ev.results[i].isFinal ? fin++ : parc++;
+      }
+      this.marcar(fin ? "FINAL do Chrome" : "parcial do Chrome", tam + " ch");
+    }
     const agora = Date.now();
     if (!this.tInicioFrase) this.tInicioFrase = agora - PARCIAL.atrasoAsrMs;
 
@@ -847,6 +860,23 @@ export class MotorCopiloto {
   }
 
   // Pergunta ao Jev com o texto que existe até agora, sem esperar o ponto final.
+  // ------------------------------------------------------------------
+  // Cronômetro de diagnóstico.
+  //
+  // O rodapé já mostra o tempo do Jev, mas ele é só o último pedaço. O
+  // atraso que se sente na call pode estar no ASR do Chrome (entre a fala
+  // e o primeiro parcial), na nossa política de disparo, ou na rede. Sem
+  // separar os três, qualquer ajuste é chute.
+  //
+  // Leia no console da aba:  copilotoCronometro()
+  // ------------------------------------------------------------------
+  private marcar(evento: string, extra?: string) {
+    const g = globalThis as unknown as { __cron?: { t: number; evento: string; extra?: string }[] };
+    if (!g.__cron) g.__cron = [];
+    g.__cron.push({ t: Math.round(performance.now()), evento, extra });
+    if (g.__cron.length > 200) g.__cron.splice(0, g.__cron.length - 200);
+  }
+
   private dispararParcial(txt: string, agora: number) {
     if (!txt || !this.ativo) return;
     // Não repergunta a mesma coisa. Mas o portão só vale da SEGUNDA vez em
@@ -863,6 +893,7 @@ export class MotorCopiloto {
     this.textoDecidido = txt;
     this.ultimoDisparo = agora;
     // NÃO entra no histórico: parcial ainda vai mudar.
+    this.marcar("→ perguntei ao Jev", txt.length + " ch");
     void this.decidir(txt);
   }
 
@@ -871,7 +902,7 @@ export class MotorCopiloto {
     if (this.falas.length > 40) this.falas = this.falas.slice(-40);
     publicarEvento({ tipo: "fala", quem, texto: txt });
     // Sua fala entra como CONTEXTO em montarState; só a do cliente decide.
-    if (quem === "cliente") void this.decidir(txt);
+    if (quem === "cliente") { this.marcar("→ perguntei ao Jev (final)", txt.length + " ch"); void this.decidir(txt); }
   }
 
   // ================================================================
@@ -909,6 +940,7 @@ export class MotorCopiloto {
 
     const d = decidirRegra(json, this.objecoes, this.ultimaMostrada);
 
+    this.marcar("← Jev respondeu");
     let card = this.estado.card;
     let historico = this.estado.historico;
 
@@ -1069,3 +1101,32 @@ export function obterMotor(): MotorCopiloto {
 }
 
 export const ESTADO_INICIAL = INICIAL;
+
+// ====================================================================
+// Leitor do cronômetro, para o console da aba.
+//
+//   copilotoCronometro()
+//
+// Imprime a linha do tempo da última frase com o intervalo entre cada
+// etapa, para separar o que é ASR do Chrome, o que é nossa política de
+// disparo e o que é rede.
+// ====================================================================
+if (typeof window !== "undefined") {
+  (window as unknown as { copilotoCronometro: () => void }).copilotoCronometro = () => {
+    const g = globalThis as unknown as { __cron?: { t: number; evento: string; extra?: string }[] };
+    const l = g.__cron || [];
+    if (!l.length) { console.log("Nada gravado ainda. Ligue e fale uma frase."); return; }
+    // Corta na última vez que uma fala começou: queremos UMA frase.
+    const i = l.map((x) => x.evento).lastIndexOf("fala começou (onspeechstart)");
+    const frase = i >= 0 ? l.slice(i) : l;
+    const t0 = frase[0].t;
+    console.table(
+      frase.map((x, k) => ({
+        "desde a fala": (x.t - t0) + " ms",
+        "desde o anterior": k ? "+" + (x.t - frase[k - 1].t) + " ms" : "—",
+        etapa: x.evento,
+        "": x.extra || "",
+      }))
+    );
+  };
+}
