@@ -15,8 +15,11 @@ import { criarClienteServidor, temCredenciaisServidor } from "@/lib/supabase/ser
 export type Vendedor = {
   id: string;
   nome: string;
-  emContato: number;
+  /** Quantos leads passaram pela mão dele. Cumulativo. */
+  pegos: number;
+  /** Quantos ele conseguiu o contato de quem decide. Cumulativo. */
   qualificados: number;
+  /** Quantos viraram venda. Cumulativo. */
   fechados: number;
 };
 
@@ -42,9 +45,9 @@ export async function carregarLeads(): Promise<Carga> {
       meuId: VENDEDOR_EXEMPLO.id,
       meuNome: VENDEDOR_EXEMPLO.nome,
       vendedores: [
-        { id: VENDEDOR_EXEMPLO.id, nome: VENDEDOR_EXEMPLO.nome, emContato: 2, qualificados: 1, fechados: 0 },
-        { id: "demo-2", nome: "Ana Prado", emContato: 1, qualificados: 3, fechados: 2 },
-        { id: "demo-3", nome: "Caio Melo", emContato: 0, qualificados: 0, fechados: 0 },
+        { id: VENDEDOR_EXEMPLO.id, nome: VENDEDOR_EXEMPLO.nome, pegos: 3, qualificados: 1, fechados: 0 },
+        { id: "demo-2", nome: "Ana Prado", pegos: 6, qualificados: 4, fechados: 2 },
+        { id: "demo-3", nome: "Caio Melo", pegos: 0, qualificados: 0, fechados: 0 },
       ],
     };
   }
@@ -85,14 +88,18 @@ export async function carregarLeads(): Promise<Carga> {
         return {
           id: p.id,
           nome: p.nome || "sem nome",
-          // Baldes que NÃO se sobrepõem: um lead cai em exatamente um.
-          // Contar qualificado e fechado separado fazia o mesmo registro
-          // aparecer duas vezes, e um cartão com "1 fechado, 1 qualificado"
-          // parecia dois leads quando era um só.
-          emContato: meus.filter((l) => l.situacao === "meu").length,
-          qualificados: meus.filter(
-            (l) => l.situacao === "qualificado" && l.etapa !== "fechou" && l.etapa !== "perdeu"
-          ).length,
+          // FUNIL CUMULATIVO, não baldes exclusivos. Cada etapa é
+          // subconjunto da anterior: quem fechou também qualificou, e quem
+          // qualificou também pegou.
+          //
+          // A primeira versão usava baldes que não se sobrepõem, para os
+          // números somarem o total. Estava errado: qualificar é uma
+          // CONQUISTA, não um estado, e fechar depois não desfaz o
+          // trabalho de ter conseguido o contato do decisor. Um vendedor
+          // que pegou, qualificou e fechou via "1 fechado, 0 qualificados"
+          // — a tela apagava o que ele tinha feito.
+          pegos: meus.length,
+          qualificados: meus.filter((l) => l.situacao === "qualificado").length,
           fechados: meus.filter((l) => l.etapa === "fechou").length,
         };
       })
@@ -102,7 +109,7 @@ export async function carregarLeads(): Promise<Carga> {
         (a, b) =>
           b.fechados - a.fechados ||
           b.qualificados - a.qualificados ||
-          b.emContato - a.emContato ||
+          b.pegos - a.pegos ||
           a.nome.localeCompare(b.nome, "pt-BR")
       );
 

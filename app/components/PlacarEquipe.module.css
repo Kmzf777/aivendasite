@@ -126,17 +126,20 @@
   color: var(--voce);
 }
 
-.numeros { display: flex; gap: 16px; }
+/* O funil: números cumulativos, cada etapa subconjunto da anterior.
+   As setas não são enfeite — são o que impede a leitura de "três baldes
+   separados", que foi o erro da primeira versão. */
+.funil { list-style: none; display: flex; align-items: flex-end; gap: 9px; }
 
-.numero { display: flex; flex-direction: column; line-height: 1.1; }
-.numero strong {
+.etapa { display: flex; flex-direction: column; line-height: 1.1; }
+.etapa strong {
   font-family: var(--fonte-mono), monospace;
   font-size: 21px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--tinta-fraca);
 }
-.numero em {
+.etapa em {
   font-style: normal;
   font-size: 9.5px;
   letter-spacing: .08em;
@@ -145,11 +148,17 @@
   margin-top: 3px;
 }
 
-/* Fechado é o desfecho e ganha a cor forte. Zero fica apagado de
-   propósito: um zero aceso parece conquista. */
-.numero[data-tom="ganho"] strong { color: var(--ok); font-size: 25px; }
-.numero[data-tom="ok"] strong    { color: var(--tinta); }
-.numero strong:where([data-zero="sim"]) { color: var(--tinta-fantasma); }
+/* Fechou é o desfecho e ganha a cor forte e o corpo maior. */
+.etapa[data-tom="ok"] strong    { color: var(--tinta); }
+.etapa[data-tom="ganho"] strong { color: var(--ok); font-size: 25px; }
+
+.seta {
+  font-size: 15px;
+  line-height: 1;
+  color: var(--tinta-fantasma);
+  padding-bottom: 13px;
+  opacity: .55;
+}
 
 @media (max-width: 560px) {
   .vendedores { grid-template-columns: 1fr; }

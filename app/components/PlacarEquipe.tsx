@@ -31,9 +31,7 @@ export default function PlacarEquipe({
   // A equipe inteira, menos quem nunca encostou num lead. Mostrar cinco
   // cartões zerados empurra para baixo quem está produzindo — o placar
   // existe para dar vontade de aparecer nele, não para catalogar gente.
-  const noPlacar = vendedores.filter(
-    (v) => v.fechados + v.qualificados + v.emContato > 0 || v.id === meuId
-  );
+  const noPlacar = vendedores.filter((v) => v.pegos > 0 || v.id === meuId);
 
   return (
     <section className={estilo.placar}>
@@ -100,22 +98,32 @@ export default function PlacarEquipe({
                   </span>
                 </div>
 
-                <div className={estilo.numeros}>
-                  {/* Fechado primeiro, e maior: é o desfecho. Qualificado é
-                      meio do caminho, e "na mão" é só promessa. */}
-                  <span className={estilo.numero} data-tom="ganho">
-                    <strong>{v.fechados}</strong>
-                    <em>fechados</em>
-                  </span>
-                  <span className={estilo.numero} data-tom="ok">
+                {/* Funil da esquerda para a direita, com as setas à mostra:
+                    os números são CUMULATIVOS e cada etapa é subconjunto da
+                    anterior. Sem as setas, três números lado a lado voltam a
+                    ser lidos como baldes separados — e aí "1 pegou, 1
+                    qualificou, 1 fechou" pareceria três leads em vez de um
+                    com conversão perfeita. */}
+                <ol className={estilo.funil}>
+                  <li className={estilo.etapa}>
+                    <strong>{v.pegos}</strong>
+                    <em>pegou</em>
+                  </li>
+                  <li className={estilo.seta} aria-hidden>
+                    ›
+                  </li>
+                  <li className={estilo.etapa} data-tom="ok">
                     <strong>{v.qualificados}</strong>
-                    <em>qualificados</em>
-                  </span>
-                  <span className={estilo.numero}>
-                    <strong>{v.emContato}</strong>
-                    <em>na mão</em>
-                  </span>
-                </div>
+                    <em>qualificou</em>
+                  </li>
+                  <li className={estilo.seta} aria-hidden>
+                    ›
+                  </li>
+                  <li className={estilo.etapa} data-tom="ganho">
+                    <strong>{v.fechados}</strong>
+                    <em>fechou</em>
+                  </li>
+                </ol>
               </li>
             );
           })}
