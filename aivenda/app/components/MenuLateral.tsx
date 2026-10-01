@@ -9,7 +9,8 @@ import estilo from "./MenuLateral.module.css";
 // pega um, liga (cold call), e o funil é onde o que deu certo continua.
 // Objeções fica por último porque é configuração, não operação.
 const PORTAS = [
-  { href: "/leads", nome: "Leads", desc: "o poço", glifo: "▦" },
+  { href: "/lista", nome: "Lista de leads", desc: "a equipe toda", glifo: "▦" },
+  { href: "/leads", nome: "Meus leads", desc: "na sua mão", glifo: "▪" },
   { href: "/coldcall", nome: "Cold call", desc: "modo foco", glifo: "◉" },
   { href: "/funil", nome: "Funil", desc: "seus qualificados", glifo: "▤" },
   { href: "/objecoes", nome: "Objeções", desc: "configuração", glifo: "⚙" },
@@ -22,7 +23,7 @@ export default function MenuLateral() {
   // data-foco é lido pelo :has() do casco, que tira a coluna da grade.
   return (
     <nav className={estilo.menu} data-foco={foco ? "sim" : "nao"} aria-hidden={foco}>
-      <Link href="/leads" className={estilo.marca}>
+      <Link href="/lista" className={estilo.marca}>
         Copiloto
       </Link>
 

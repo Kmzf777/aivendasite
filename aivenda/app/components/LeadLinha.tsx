@@ -5,6 +5,9 @@ import estilo from "./LeadLinha.module.css";
 
 type Props = {
   lead: LeadDoPoco;
+  /** Lista da equipe inteira (true) ou só os meus (false). Muda a leitura:
+      na universal, lead pego aparece apagado e riscado. */
+  universal: boolean;
   /** Quem está logado. Null quando não há sessão (ou no modo demonstração). */
   meuId: string | null;
   /** Há uma ação deste lead em voo. Trava só os botões desta linha. */
@@ -29,6 +32,7 @@ function milhar(n: number | null) {
 
 export default function LeadLinha({
   lead,
+  universal,
   meuId,
   ocupado,
   aoPegar,
@@ -40,6 +44,13 @@ export default function LeadLinha({
   const eMeu = Boolean(meuId) && lead.vendedor_id === meuId;
   const deOutro = Boolean(lead.vendedor_id) && !eMeu;
   const qualificado = lead.situacao === "qualificado";
+  const descartado = lead.situacao === "nao_qualificado";
+
+  // Na lista universal, lead JÁ PEGO é informação, não trabalho: apaga e
+  // risca. O que sobra aceso é o que ainda está livre, que é o ponto da
+  // tela. Em "meus leads" ninguém risca nada — ali tudo é seu e tudo é
+  // trabalho a fazer.
+  const riscado = universal && !semDono;
 
   // O contato de quem decide é o ativo que a ligação produziu. Quando existe,
   // ele aparece na linha — é a prova de que o trabalho foi feito.
@@ -48,7 +59,7 @@ export default function LeadLinha({
   const avaliacoes = milhar(lead.avaliacoes);
 
   return (
-    <li className={estilo.linha} data-situacao={lead.situacao} data-sem-dono={semDono}>
+    <li className={`${estilo.linha} ${riscado ? estilo.riscado : ""}`} data-situacao={lead.situacao} data-sem-dono={semDono}>
       {/* ------------------------------------------------ identidade */}
       <div className={estilo.quem}>
         <div className={estilo.nomeLinha}>
@@ -119,6 +130,16 @@ export default function LeadLinha({
           </span>
         )}
         {qualificado && <span className={estilo.selo} data-cor="ok">qualificado</span>}
+        {/* O desfecho negativo também é informação: na lista universal, saber
+            que alguém ligou e descartou evita a segunda ligação inútil. */}
+        {descartado && <span className={estilo.selo} data-cor="erro">não qualificado</span>}
+        {/* Pego e ainda sem desfecho. Existe um terceiro estado além de
+            qualificado e não qualificado, e deixar a coluna vazia nele faz
+            a tela parecer quebrada em vez de informar que a ligação ainda
+            não aconteceu. */}
+        {lead.situacao === "meu" && (
+          <span className={estilo.selo}>em contato</span>
+        )}
       </div>
 
       {/* ------------------------------------------------ ações */}
