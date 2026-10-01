@@ -70,13 +70,17 @@ export async function perfilAtual(): Promise<Perfil | null> {
     id: usuario.id,
     nome: nomeDoUsuario(usuario),
     email: usuario.email ?? "",
+    // Sem a linha no banco não dá para saber se é admin. Negar é o certo:
+    // o perfil de emergência existe para a tela não ficar sem nome, não
+    // para destravar permissão.
+    admin: false,
   };
 
   try {
     const supabase = await criarClienteServidor();
     const { data, error } = await supabase
       .from("perfis")
-      .select("id, nome, email")
+      .select("id, nome, email, admin")
       .eq("id", usuario.id)
       .maybeSingle();
 
@@ -87,6 +91,7 @@ export async function perfilAtual(): Promise<Perfil | null> {
       id: data.id,
       nome: data.nome?.trim() || deEmergencia.nome,
       email: data.email?.trim() || deEmergencia.email,
+      admin: data.admin === true,
     };
   } catch {
     return deEmergencia;
