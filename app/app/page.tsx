@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
-// A raiz nao tem tela propria: o dia de trabalho comeca no poco de leads.
+// O dia comeca na lista universal: e ela que mostra quanta coisa ainda
+// esta sem dono, que e o convite a ligar.
 export default function Raiz() {
-  redirect("/leads");
+  redirect("/lista");
 }
