@@ -118,6 +118,7 @@ type Reconhecedor = {
   stop: () => void;
   abort: () => void;
   onstart: (() => void) | null;
+  onsoundstart: (() => void) | null;
   onspeechstart: (() => void) | null;
   onresult: ((ev: EventoSR) => void) | null;
   onerror: ((ev: { error: string }) => void) | null;
@@ -167,10 +168,38 @@ let recAtivo: Reconhecedor | null = null;
 const CRU = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
 const AMOSTRA_MS = 50;
 
+// ------------------------------------------------------------------
+// Quando perguntar ao Jev.
+//
+// Medido numa call real, com "Eu preciso ver com meu marido": o Chrome
+// entrega o primeiro parcial em 0 ms e depois um a cada ~150 ms. Ele NÃO
+// é o gargalo. Os dois desperdícios eram nossos:
+//
+//   1. a primeira pergunta saía com 2 caracteres ("Eu"), inútil - e ainda
+//      consumia a janela do teto, que era a única porta aberta;
+//   2. entre 213 e 1006 ms chegaram SETE parciais e nenhuma pergunta saiu,
+//      porque o debounce de 500 ms era rearmado a cada parcial novo. Com
+//      parcial a cada 150 ms, aquele timer nunca disparava.
+//
+// Por isso o gatilho agora é o CRESCIMENTO do texto, não o silêncio: numa
+// fala contínua o texto cresce, e é nele que a objeção aparece. O silêncio
+// vira só o caso de borda (a frase acabou).
+// ------------------------------------------------------------------
 const PARCIAL = {
-  pausaMs: 500, // silêncio curto: a frase provavelmente acabou
-  tetoMs: 1200, // falando sem parar, pergunta assim mesmo a cada tanto
-  minCrescimento: 10, // só REpergunta se apareceu texto novo que valha
+  // Abaixo disso não há o que classificar: "Eu" não é objeção de nada.
+  // Mas o piso tem que caber em "tá caro", que tem 7 caracteres e é a
+  // objeção mais comum do catálogo. Errar para cima aqui custa uma venda;
+  // errar para baixo custa US$ 0,000044 numa resposta "nada".
+  minParaPerguntar: 6,
+  // Cresceu isto desde a última pergunta? Então há texto novo que pode
+  // conter a objeção - vale perguntar de novo.
+  minCrescimento: 8,
+  // Piso entre duas perguntas, para não disparar a cada parcial.
+  minIntervaloMs: 350,
+  // Rede de segurança: fala longa sem crescimento que atinja o mínimo.
+  tetoMs: 700,
+  // A frase acabou (parou de chegar texto novo).
+  pausaMs: 450,
   atrasoAsrMs: 1200, // largura mínima da janela de atribuição (ver abaixo)
 };
 
@@ -693,6 +722,7 @@ export class MotorCopiloto {
       r.onend = null;
       r.onerror = null;
       r.onstart = null;
+      r.onsoundstart = null;
       r.onspeechstart = null;
       try {
         r.abort();
@@ -733,6 +763,7 @@ export class MotorCopiloto {
 
     // Marca o início da fala no domínio do ÁUDIO, não no da rede. É o
     // melhor ancoradouro que existe para a janela de atribuição.
+    r.onsoundstart = () => this.marcar("som começou (onsoundstart)");
     r.onspeechstart = () => {
       this.marcar("fala começou (onspeechstart)");
       if (!this.tInicioFrase) this.tInicioFrase = Date.now();
@@ -848,9 +879,23 @@ export class MotorCopiloto {
     if (!parcial) return;
     this.parcialAtual = parcial;
 
-    if (agora - this.ultimoDisparo >= PARCIAL.tetoMs) {
+    const desdeUltima = agora - this.ultimoDisparo;
+    const cresceu = parcial.length - this.textoDecidido.length;
+    const grandeOBastante = parcial.length >= PARCIAL.minParaPerguntar;
+
+    // Cresceu o suficiente, respeitando o piso entre perguntas. É o caminho
+    // normal numa fala contínua - o texto cresce e a objeção aparece nele.
+    const porCrescimento =
+      grandeOBastante && cresceu >= PARCIAL.minCrescimento && desdeUltima >= PARCIAL.minIntervaloMs;
+
+    // Rede: falando sem parar mas sem crescer o bastante.
+    const porTeto = grandeOBastante && desdeUltima >= PARCIAL.tetoMs;
+
+    if (porCrescimento || porTeto) {
       this.dispararParcial(parcial, agora);
     } else {
+      // O silêncio virou caso de borda: só vale quando o texto PAROU de
+      // crescer. Rearmar a cada parcial era o que travava tudo antes.
       if (this.timerParcial) clearTimeout(this.timerParcial);
       this.timerParcial = setTimeout(
         () => this.dispararParcial(this.parcialAtual, Date.now()),
