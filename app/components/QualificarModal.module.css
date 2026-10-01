@@ -1,0 +1,46 @@
+.forma {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mono {
+  font-family: var(--fonte-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* Atalho do caso "o número da lista já é do dono": existe para não obrigar
+   a redigitar um telefone que já está na tela. */
+.atalho {
+  align-self: flex-start;
+  margin-top: 2px;
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  color: var(--tinta-fraca);
+  background: transparent;
+  border: 1px dashed var(--linha-viva);
+  border-radius: var(--raio-p);
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: color 0.16s var(--mola), border-color 0.16s var(--mola);
+}
+.atalho:hover { color: var(--tinta); border-color: var(--voce); }
+.atalho code {
+  font-family: var(--fonte-mono), monospace;
+  color: var(--tinta);
+}
+
+.pe {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
