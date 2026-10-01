@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { criarCliente, temCredenciais } from "@/lib/supabase/cliente";
@@ -228,10 +230,8 @@ export default function FormularioLogin({
       </form>
 
       <p className={estilo.rodape}>
-        Não existe cadastro aberto aqui. O primeiro acesso é criado à mão no painel do
-        Supabase, em <em>Authentication → Users → Add user</em>; os seguintes entram por
-        convite. Se você não tem conta, peça a quem administra — o perfil nasce sozinho no
-        banco quando o usuário é criado.
+        Não tem conta? <Link href="/cadastro">Criar conta</Link>. O perfil nasce sozinho no
+        banco assim que o usuário é criado.
       </p>
     </div>
   );

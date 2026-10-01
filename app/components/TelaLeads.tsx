@@ -84,6 +84,7 @@ export default async function TelaLeads({ modo }: { modo: "universal" | "meus" }
     <LeadsPoco
       modo={modo}
       leads={leads}
+      vendedores={carga.vendedores}
       meuId={carga.meuId}
       meuNome={carga.meuNome}
       demonstracao={carga.estado === "demonstracao"}
