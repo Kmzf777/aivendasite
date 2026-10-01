@@ -1,0 +1,34 @@
+/* A tela de recusa. Sóbria e curta: quem chegou aqui errou de porta, e a
+   única coisa útil é dizer o porquê e como voltar. */
+.portao {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 14px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.portao h1 {
+  font-family: var(--fonte-serif), serif;
+  font-weight: 400;
+  font-size: clamp(30px, 4vw, 44px);
+  letter-spacing: -.02em;
+  line-height: 1.08;
+}
+
+.corpo { display: flex; flex-direction: column; gap: 10px; color: var(--tinta-fraca); font-size: 15px; }
+.corpo code {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 13px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+.corpo strong { color: var(--tinta); }
+
+.pista { color: var(--tinta-fantasma); font-size: 13.5px; }

@@ -11,7 +11,13 @@ export const ETAPAS: { id: Etapa; nome: string }[] = [
   { id: "perdeu", nome: "Perdeu" },
 ];
 
-export type Perfil = { id: string; nome: string; email: string };
+export type Perfil = {
+  id: string;
+  nome: string;
+  email: string;
+  /** Admin abre o Cold call. Muda só pelo banco — ver migracao-002. */
+  admin: boolean;
+};
 
 export type Lead = {
   id: string;

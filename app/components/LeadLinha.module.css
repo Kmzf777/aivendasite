@@ -284,3 +284,21 @@
   .dono { grid-column: 1; }
   .acoes { grid-column: 2; grid-row: 1 / span 3; flex-direction: column; align-items: flex-end; }
 }
+
+/* ------------------------------------------------------------------
+   Lead já pego, visto da lista universal.
+   Vira informação, não trabalho: apaga e risca. O que sobra aceso na
+   tela é o que ainda está livre - que é o ponto da lista.
+   Não se aplica em "meus leads": lá tudo é seu e tudo é trabalho.
+   ------------------------------------------------------------------ */
+.riscado { opacity: .42; }
+.riscado:hover { opacity: .62; }
+
+/* Risca só o NOME. Riscar a linha inteira tornaria o telefone e o nome de
+   quem pegou ilegíveis - e são justamente os dois dados que ainda
+   interessam num lead que não é seu. */
+.riscado .nome {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--tinta-fantasma);
+}
