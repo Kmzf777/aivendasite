@@ -1,0 +1,47 @@
+/* Lado a lado, como os botoes de modo logo abaixo. Medido na tela: com os
+   dois objetivos atuais, duas colunas ficam em tres linhas cada e o grupo
+   cai de 180px para 105px. Esses 75px importam porque o modal ja e mais
+   alto que um notebook (883px de altura em 633px de viewport) e e no fim
+   dele que mora o botao Ligar - empilhado, o Ligar afunda mais ainda.
+
+   O auto-fit com minimo e o que impede isso de virar armadilha: um fluxo
+   com objetivo mais longo, um terceiro fluxo, ou uma tela estreita
+   quebram a linha sozinhos em vez de espremer o texto ate o ilegivel. */
+
+.lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 7px;
+}
+
+/* Mesma familia visual do .modo do ModalConfig (e a mesma natureza: uma
+   escolha entre poucas opcoes), so maior e com duas linhas de texto. */
+.fluxo {
+  display: grid;
+  gap: 2px;
+  font: inherit;
+  text-align: left;
+  color: var(--tinta-fraca);
+  background: var(--vazio);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-p);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color .16s var(--mola), color .16s var(--mola), background .16s var(--mola);
+}
+.fluxo:hover { color: var(--tinta); }
+
+/* Azul de --voce, o mesmo do modo ativo: no mesmo modal, dois acentos
+   diferentes para a mesma acao (escolher) fariam a tela parecer um aviso. */
+.fluxo.ativo {
+  color: var(--voce);
+  border-color: color-mix(in oklab, var(--voce) 60%, transparent);
+  background: color-mix(in oklab, var(--voce) 12%, var(--vazio));
+}
+
+.nome { font-size: 14.5px; font-weight: 650; }
+
+/* O objetivo nao acende junto com o nome: tem cor propria. Pintar a frase
+   inteira de azul transforma o botao escolhido num bloco de alerta, e ele
+   e so a escolha feita. */
+.objetivo { font-size: 12.5px; line-height: 1.45; color: var(--tinta-fantasma); }

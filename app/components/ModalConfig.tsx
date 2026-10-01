@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import SeletorFluxo from "./SeletorFluxo";
 import type { Entrada } from "@/hooks/useDispositivos";
 import type { Estado, Modo } from "@/hooks/motorCopiloto";
+import { useFluxos, type FluxoListado } from "@/hooks/useFluxos";
 import estilo from "./ModalConfig.module.css";
 
 type Props = {
@@ -16,7 +18,14 @@ type Props = {
   lerNiveis: () => { v: number; c: number };
   aoTestar: (op: { idV: string; idC: string; modo: Modo }) => void;
   aoPararTeste: () => void;
-  aoLigar: (op: { idV: string; idC: string; modo: Modo }) => void;
+  // O fluxo vai junto com o Ligar, resolvido AQUI, porque é aqui que mora a
+  // lista. Quem liga precisa do objeto inteiro, não do id: é definirFluxo que
+  // zera etapa e colheita, e ele pede o fluxo. Mandar só o id obrigaria a
+  // página a buscar a lista por conta própria para reencontrá-lo — e duas
+  // buscas da mesma lista é um jeito de o reset sumir calado no dia em que
+  // uma responder e a outra não.
+  aoLigar: (op: { idV: string; idC: string; modo: Modo; fluxo: FluxoListado | null }) => void;
+  aoEscolherFluxo: (fluxo: FluxoListado) => void;
 };
 
 // ------------------------------------------------------------------
@@ -75,10 +84,16 @@ export default function ModalConfig({
   aoTestar,
   aoPararTeste,
   aoLigar,
+  aoEscolherFluxo,
 }: Props) {
   const [modo, setModo] = useState<Modo>("tecla");
   const [idV, setIdV] = useState("");
   const [idC, setIdC] = useState("");
+
+  // A lista é buscada aqui porque é aqui que se escolhe, e só aqui: a página
+  // não tem cópia dela. O clique sobe por `aoEscolherFluxo` e o fluxo inteiro
+  // viaja de novo no `aoLigar`, como toda ação deste modal.
+  const { fluxos, erro: erroFluxos, pronto: prontoFluxos } = useFluxos();
 
   // Quando a lista chega, escolhe a primeira entrada. Poupa um clique no
   // caso comum (um microfone só) sem esconder a escolha.
@@ -86,12 +101,31 @@ export default function ModalConfig({
     if (!idV && entradas.length) setIdV(entradas[0].id);
   }, [entradas, idV]);
 
+  // Resolvido CONTRA A LISTA QUE O VENDEDOR VIU, que é esta: ele só pode ter
+  // escolhido um fluxo que estava desenhado aqui, então aqui o `find` não tem
+  // como não achar. A página fazia esta mesma conta contra uma SEGUNDA busca,
+  // e era essa a armadilha: duas buscas independentes podem divergir — a do
+  // modal responde, a da página falha — e aí o find de lá não achava nada, o
+  // reset não acontecia e ninguém ficava sabendo.
+  const fluxoAtivo = fluxos.find((f) => f.id === estado.fluxoId) ?? null;
+
   const doisIguais = modo === "dois" && !!idV && idV === idC;
   const faltaC = modo === "dois" && !idC;
   // Sem catálogo o Jev não tem o que escolher: ligar seria ligar um
   // sistema que nunca mostra card. Melhor travar o botão e dizer por quê.
   const podeLigar =
     !!idV && !faltaC && !doisIguais && quantasObjecoes > 0 && estado.situacao === "parado";
+
+  // Nenhum destes textos cobra a escolha, porque ela não é obrigatória: sem
+  // fluxo o copiloto é o que sempre foi, só com card de objeção. Daí também
+  // o fluxo não entrar no `podeLigar` acima.
+  const ajudaFluxo = !prontoFluxos
+    ? "Procurando os fluxos…"
+    : !fluxos.length
+      ? "Nenhum fluxo em fluxos/. Dá para ligar assim: o copiloto trabalha só com os cards de objeção."
+      : estado.fluxoId
+        ? "A dica de etapa é ordem curta para você pensar, não fala para ler em voz alta."
+        : "Pode ligar sem escolher: aí o copiloto vai só com os cards de objeção, sem dica de etapa.";
 
   const ajuda =
     modo === "tecla"
@@ -124,8 +158,22 @@ export default function ModalConfig({
           </Link>
         </header>
 
+        {/* O fluxo vem antes do áudio de propósito: microfone e modo são
+            instalação, acertados uma vez e raramente tocados de novo; que
+            ligação é esta muda a cada lead e é a única coisa que o vendedor
+            tem mesmo que decidir antes de discar. */}
         <div className={estilo.grupo}>
-          <span className="rotulo">1 · como separar as vozes</span>
+          <span className="rotulo">1 · que ligação é esta</span>
+          {/* O escolhido NÃO vira estado deste componente: a verdade é o
+              motor, que publica fluxoId. Uma cópia local se perderia no
+              desmonte do modal ao ligar e, no fim da ligação, o seletor
+              voltaria em branco com o motor ainda no fluxo antigo. */}
+          <SeletorFluxo fluxos={fluxos} escolhido={estado.fluxoId} aoEscolher={aoEscolherFluxo} />
+          <p className={estilo.ajuda}>{ajudaFluxo}</p>
+        </div>
+
+        <div className={estilo.grupo}>
+          <span className="rotulo">2 · como separar as vozes</span>
           <div className={estilo.modos}>
             <button
               type="button"
@@ -146,7 +194,7 @@ export default function ModalConfig({
         </div>
 
         <div className={estilo.grupo}>
-          <span className="rotulo">2 · entradas</span>
+          <span className="rotulo">3 · entradas</span>
 
           <label className={estilo.rot} htmlFor="entV">
             {modo === "tecla" ? "Microfone (ouve você e o cliente)" : "Você (microfone / headset)"}
@@ -220,12 +268,15 @@ export default function ModalConfig({
         {(erroEntradas || estado.erro) && <p className={estilo.ruim}>{erroEntradas || estado.erro}</p>}
         {estado.aviso && <p className={estilo.morno}>{estado.aviso}</p>}
         {erroCatalogo && <p className={estilo.morno}>{erroCatalogo}</p>}
+        {/* Morno, não ruim: falhar a leitura dos fluxos tira a dica de etapa
+            e nada mais. O botão de Ligar continua liberado. */}
+        {erroFluxos && <p className={estilo.morno}>{erroFluxos}</p>}
 
         <footer className={estilo.pe}>
           <button
             type="button"
             className={`btn btn-forte ${estilo.ligar}`}
-            onClick={() => aoLigar({ idV, idC, modo })}
+            onClick={() => aoLigar({ idV, idC, modo, fluxo: fluxoAtivo })}
             disabled={!podeLigar}
           >
             {estado.situacao === "ligando" ? "Ligando…" : "Ligar"}

@@ -13,12 +13,19 @@
 import {
   CONFIG,
   NOMES_FASE,
-  montarPerguntas,
   montarState,
   aplicarRegra,
   calcularCusto,
 } from "../lib/decisao.js";
 import { quemFalou, quemFalouPorTransicoes } from "../lib/atribuir.js";
+import {
+  perguntasDoCliente,
+  perguntasDoVendedor,
+  copilotoInicial,
+  turnoDoCliente,
+  turnoDoVendedor,
+  fimDaLigacao,
+} from "../lib/copiloto.js";
 
 // ------------------------------------------------------------------
 // Tipos
@@ -34,6 +41,13 @@ export type Objecao = {
   headline?: string;
   pivot?: string;
   argumento?: string;
+  // "objecao" | "pergunta" | "triagem" | "stop". Declarado aqui porque NÃO é
+  // catalogação: lib/copiloto.js lê `objecao.tipo === "stop"` para limpar a
+  // tela e deixar só o encerramento. Sem o campo no tipo, alguém que
+  // "arrumasse" o catálogo tirando o campo quebraria o stop sem ver erro
+  // nenhum — e o sintoma seria uma dica de venda em cima de um "não me ligue
+  // mais". Opcional porque o catálogo antigo (lib/objecoes-exemplo.js) não tem.
+  tipo?: string;
 };
 
 export type Card = {
@@ -52,6 +66,41 @@ export type Card = {
 
 export type ItemHistorico = { chave: number; nome: string };
 
+// O que aparece empilhado na tela. Veja lib/dicas.js: no maximo 3, no maximo
+// 6 palavras cada, e nunca entre aspas — nao e para ler em voz alta.
+export type Dica = {
+  id: string;
+  tipo: "stop" | "objecao" | "lacuna" | "sentimento";
+  texto: string;
+  nova: boolean;
+  rodadas: number;
+};
+
+export type ItemColhido = { campo: string; valor: string; trecho: string };
+
+// O catálogo de um tipo de ligação. Vive em fluxos/*.json e é validado por
+// `node valida-fluxo.js` antes de subir — id sem comoSoa some da lista do Jev
+// em silêncio, e isso só apareceria no meio de uma ligação.
+export type Fluxo = {
+  id: string;
+  nome?: string;
+  etapas: { id: string; nome?: string; comoSoa: string; exige?: string[]; pula_se?: string[] }[];
+  acoes: { id: string; comoSoa: string; dica: string }[];
+};
+
+// O estado do copiloto é opaco aqui de propósito: quem o manipula é
+// lib/copiloto.js, que é puro e tem teste próprio. Este arquivo só o carrega.
+type EstadoCopiloto = {
+  etapa: { etapa: number; feitas: string[]; visto: string[] };
+  colheita: {
+    telefones: unknown[];
+    nomes: unknown[];
+    horario: unknown | null;
+  };
+  dicas: Dica[];
+  ultimaMostrada: string | null;
+};
+
 export type Estado = {
   situacao: "parado" | "ligando" | "ouvindo";
   modo: Modo;
@@ -64,6 +113,13 @@ export type Estado = {
   card: Card | null;
   historico: ItemHistorico[];
   faseCall: string | null;
+  // --- fluxo, dicas e colheita ---
+  fluxoId: string | null;
+  fluxoNome: string | null;
+  etapa: string | null; // nome legivel da etapa atual
+  etapaPos: string | null; // "3 de 9"
+  dicas: Dica[];
+  colhidos: number; // quantos itens esperam confirmacao ao desligar
   ultimaAcao: AcaoDecisao | null;
   decisoes: number;
   latencia: number | null; // média em ms
@@ -247,6 +303,12 @@ const INICIAL: Estado = {
   card: null,
   historico: [],
   faseCall: null,
+  fluxoId: null,
+  fluxoNome: null,
+  etapa: null,
+  etapaPos: null,
+  dicas: [],
+  colhidos: 0,
   ultimaAcao: null,
   decisoes: 0,
   latencia: null,
@@ -302,6 +364,12 @@ export class MotorCopiloto {
   // --- decisão
   private falas: Fala[] = [];
   private ultimaMostrada: string | null = null;
+
+  // Fluxo e estado do copiloto. Nulos até a tela chamar definirFluxo():
+  // sem fluxo escolhido o motor funciona como antes, só com card de objeção.
+  private fluxo: Fluxo | null = null;
+  private co: EstadoCopiloto | null = null;
+  private seqV = 0; // sequência própria do turno do vendedor
   private seq = 0;
   private latencias: number[] = [];
   private chaveCard = 0;
@@ -368,6 +436,48 @@ export class MotorCopiloto {
 
   quantasObjecoes() {
     return this.objecoes.length;
+  }
+
+  // O fluxo entra de fora, como o catálogo: o motor não busca nada sozinho.
+  // Quem chama é a tela, depois do vendedor escolher qual ligação vai fazer.
+  // Trocar de fluxo zera o estado da ligação de propósito — prospecção e
+  // conversão não compartilham etapa nem o que já foi feito.
+  definirFluxo(fluxo: Fluxo) {
+    if (!fluxo || !Array.isArray(fluxo.etapas) || !fluxo.etapas.length) return;
+    this.fluxo = fluxo;
+    this.co = copilotoInicial(fluxo);
+    this.publicarFluxo();
+  }
+
+  temFluxo() {
+    return !!this.fluxo;
+  }
+
+  // Espelha o estado do copiloto no Estado que a tela lê.
+  private publicarFluxo() {
+    if (!this.fluxo || !this.co) return;
+    const e = this.fluxo.etapas[this.co.etapa.etapa];
+    this.mudar({
+      fluxoId: this.fluxo.id,
+      fluxoNome: this.fluxo.nome || this.fluxo.id,
+      etapa: e ? e.nome || e.id : null,
+      etapaPos: e ? this.co.etapa.etapa + 1 + " de " + this.fluxo.etapas.length : null,
+      dicas: (this.co.dicas || []) as Dica[],
+      colhidos:
+        (this.co.colheita.telefones || []).length +
+        (this.co.colheita.nomes || []).length +
+        (this.co.colheita.horario ? 1 : 0),
+    });
+  }
+
+  // A tela de fim de ligação. Nada daqui vai para a ficha do lead sozinho:
+  // cada item vem com o trecho que o gerou, para o vendedor confirmar.
+  fim(): { confirmar: ItemColhido[]; naoFez: { id: string; dica: string }[] } | null {
+    if (!this.fluxo || !this.co) return null;
+    return fimDaLigacao(this.fluxo, this.co) as {
+      confirmar: ItemColhido[];
+      naoFez: { id: string; dica: string }[];
+    };
   }
 
   definirModo(modo: Modo) {
@@ -946,8 +1056,19 @@ export class MotorCopiloto {
     this.falas.push({ quem, fala: txt });
     if (this.falas.length > 40) this.falas = this.falas.slice(-40);
     publicarEvento({ tipo: "fala", quem, texto: txt });
-    // Sua fala entra como CONTEXTO em montarState; só a do cliente decide.
-    if (quem === "cliente") { this.marcar("→ perguntei ao Jev (final)", txt.length + " ch"); void this.decidir(txt); }
+    if (quem === "cliente") {
+      this.marcar("→ perguntei ao Jev (final)", txt.length + " ch");
+      void this.decidir(txt);
+      return;
+    }
+    // A fala do VENDEDOR também decide agora, mas só no FINAL da frase.
+    // O cliente dispara no parcial porque velocidade decide o card; aqui o
+    // que importa é "o que ele acabou de fazer", e isso só faz sentido com a
+    // frase inteira. De quebra, custa metade das chamadas.
+    if (this.fluxo && this.co) {
+      this.marcar("→ perguntei ao Jev (vendedor)", txt.length + " ch");
+      void this.decidirVendedor(txt);
+    }
   }
 
   // ================================================================
@@ -966,7 +1087,9 @@ export class MotorCopiloto {
         body: JSON.stringify({
           model: CONFIG.modelo,
           state: montarState(this.falas, textoCliente),
-          questions: montarPerguntas(this.objecoes),
+          // As 4 de sempre mais o sentimento. Uma chamada só: o Jev aceita
+          // várias perguntas de uma vez, então isto não dobra latência.
+          questions: perguntasDoCliente(this.objecoes),
         }),
       });
       json = (await r.json()) as { usage?: unknown; error?: string };
@@ -983,7 +1106,22 @@ export class MotorCopiloto {
     this.latencias.push(ms);
     const media = Math.round(this.latencias.reduce((a, b) => a + b, 0) / this.latencias.length);
 
-    const d = decidirRegra(json, this.objecoes, this.ultimaMostrada);
+    // Com fluxo escolhido, o turno passa pelo copiloto: ele aplica a MESMA
+    // regra de decisao.js e ainda colhe telefone e nome, move a etapa e monta
+    // as dicas. Sem fluxo, o motor segue como antes — só card de objeção.
+    let d: Decisao;
+    if (this.fluxo && this.co) {
+      const r = turnoDoCliente(this.fluxo, this.co, json, textoCliente, this.objecoes) as {
+        co: EstadoCopiloto;
+        decisao: Decisao;
+      };
+      this.co = r.co;
+      d = r.decisao;
+      this.ultimaMostrada = r.co.ultimaMostrada;
+      this.publicarFluxo();
+    } else {
+      d = decidirRegra(json, this.objecoes, this.ultimaMostrada);
+    }
 
     this.marcar("← Jev respondeu");
     let card = this.estado.card;
@@ -1041,6 +1179,66 @@ export class MotorCopiloto {
       escolha: d.escolha,
       objecao: d.objecao || null,
       falaCliente: textoCliente,
+      ms,
+      custo: custoDesta,
+    });
+  }
+
+  // ================================================================
+  // O turno do VENDEDOR
+  // ================================================================
+  // Pergunta duas coisas: o que ele acabou de fazer, e em que etapa a conversa
+  // está. O que ele JÁ FEZ antes não se pergunta — isso é flag no estado do
+  // fluxo, e perguntar daria resposta trêmula (ver o cabeçalho de lib/fluxo.js).
+  //
+  // Sequência PRÓPRIA (`seqV`): esta chamada e a do cliente correm em paralelo
+  // e não podem invalidar uma à outra. Usar `this.seq` faria a fala do vendedor
+  // descartar a decisão de objeção que estava chegando.
+  private async decidirVendedor(texto: string) {
+    if (!this.fluxo || !this.co) return;
+    const meu = ++this.seqV;
+    const t0 = performance.now();
+
+    let json: { usage?: unknown; error?: string } | null = null;
+    try {
+      const r = await fetch("/api/jev", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: CONFIG.modelo,
+          state: montarState(this.falas, texto),
+          questions: perguntasDoVendedor(this.fluxo, this.co),
+        }),
+      });
+      json = (await r.json()) as { usage?: unknown; error?: string };
+      if (!r.ok) throw new Error(json?.error || "HTTP " + r.status);
+    } catch {
+      // Falha aqui NÃO vira aviso na tela. O caminho crítico é o card de
+      // objeção; a dica de lacuna é um extra. Um banner vermelho no meio da
+      // ligação por causa do extra custa mais do que o extra vale.
+      this.marcar("← turno do vendedor falhou (silencioso)");
+      return;
+    }
+
+    if (meu < this.seqV) return; // chegou fala mais nova do vendedor
+
+    const ms = Math.round(performance.now() - t0);
+    const custoDesta = calcularCusto(json?.usage) as number;
+
+    const r = turnoDoVendedor(this.fluxo, this.co, json, texto) as {
+      co: EstadoCopiloto;
+      acao: string | null;
+    };
+    this.co = r.co;
+    this.publicarFluxo();
+    this.mudar({ custo: this.estado.custo + custoDesta });
+    this.marcar("← vendedor: " + (r.acao || "nada"), ms + "ms");
+
+    publicarEvento({
+      tipo: "turno-vendedor",
+      acao: r.acao,
+      etapa: this.estado.etapa,
+      texto,
       ms,
       custo: custoDesta,
     });

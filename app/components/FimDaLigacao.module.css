@@ -1,0 +1,188 @@
+/* A ultima tela da ligacao. Mesma gramatica do ModalConfig — fundo cego,
+   quadro no centro — porque e o outro portao do mesmo ritual: aquele abre a
+   call, este a fecha. Reconhecer o formato poupa leitura num momento em que
+   o vendedor ainda esta com a cabeca na conversa. */
+
+.fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: color-mix(in oklab, var(--vazio) 86%, transparent);
+  backdrop-filter: blur(7px);
+  animation: chega .2s var(--mola) both;
+}
+@keyframes chega { from { opacity: 0 } to { opacity: 1 } }
+
+.quadro {
+  width: 100%;
+  max-width: 540px;
+  padding: 24px 26px 20px;
+  background: var(--painel);
+  border: 1px solid var(--linha-viva);
+  border-radius: var(--raio);
+  box-shadow: 0 50px 110px -50px #000, 0 0 0 1px rgba(255, 255, 255, .02) inset;
+  animation: sobe .26s var(--mola) both;
+}
+@keyframes sobe {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.topo { margin-bottom: 14px; }
+.topo > :global(.rotulo) { display: block; margin-bottom: 7px; }
+.titulo {
+  font-family: var(--fonte-serif), serif;
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+}
+
+.explica {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--tinta-fraca);
+}
+
+/* A lista rola, o cabecalho e o pe nao. Uma ligacao longa pode render seis
+   ou sete palpites, e o botao de salvar nao pode fugir da tela — e ele que
+   decide se a ficha recebe algo. */
+.lista {
+  list-style: none;
+  margin: 18px 0 0;
+  max-height: min(46vh, 420px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  /* Espaco para o anel de foco do input nao ser cortado pelo overflow. */
+  padding: 2px;
+}
+
+.linha {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px 13px;
+  background: var(--vazio);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-p);
+  transition: opacity .16s var(--mola), border-color .16s var(--mola);
+}
+
+/* Desmarcada: recua, mas continua legivel e no mesmo lugar. Sumir com a
+   linha faria a lista pular debaixo do dedo e o vendedor perderia onde
+   estava — e desmarcar por engano nao teria volta visivel. */
+.fora {
+  opacity: .42;
+}
+
+/* Alinhada com o ROTULO, nao com o campo de texto: a caixa fala do item
+   inteiro, e descer ate o centro do input a descolaria do nome dele. */
+.caixa {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: var(--voce);
+  cursor: pointer;
+}
+
+.corpo { flex: 1; min-width: 0; }
+.corpo > :global(.rotulo) { display: block; margin-bottom: 5px; }
+
+.valor { font-size: 14.5px; padding: 8px 11px; }
+
+/* Numero em monoespaçada e largura de digito fixa: e assim que um "9" que
+   virou "4" aparece sem ninguem ir soletrando. */
+.digitos {
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
+
+/* Marcada e com o valor apagado: o tracejado diz que falta coisa sem usar
+   vermelho, que aqui seria alarme de erro do sistema — e o sistema nao
+   errou, o campo so esta vazio. O botao de salvar nao conta esta linha. */
+.branca .valor {
+  border-style: dashed;
+  border-color: var(--linha-viva);
+}
+
+/* O trecho: a frase crua que gerou o palpite. Fica DEBAIXO do valor, nao ao
+   lado, porque fala de cliente nao cabe em meia coluna sem virar reticencia.
+   Filete na cor do cliente em vez de aspas: marca de quem falou, nao
+   ornamento de citacao. */
+.trecho {
+  margin-top: 7px;
+  padding-left: 9px;
+  border-left: 2px solid color-mix(in oklab, var(--cliente) 50%, transparent);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--tinta-fantasma);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- o que a ligacao nao cumpriu ---------- */
+/* Nota, nao bronca: cinza fantasma, corpo menor, depois do que importa e
+   separada por um filete. Nenhuma cor de alerta — quem levar bronca aqui
+   aprende a fechar a tela sem ler, e leva a confirmacao junto. */
+.sobrou {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid var(--linha);
+}
+.sobrou > :global(.rotulo) { display: block; margin-bottom: 8px; }
+.sobrou ul {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sobrou li {
+  font-size: 12px;
+  color: var(--tinta-fantasma);
+  background: var(--vazio);
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  padding: 4px 11px;
+}
+
+.pe {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+/* Descartar e botao de texto, nao botao de verdade: as duas acoes com o
+   mesmo peso convidariam a jogar fora no automatico. */
+.descartar {
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--tinta-fantasma);
+  background: none;
+  border: none;
+  border-bottom: 1px dashed var(--linha-viva);
+  padding: 2px 0;
+  cursor: pointer;
+  transition: color .16s var(--mola);
+}
+.descartar:hover:not(:disabled) { color: var(--tinta-fraca); }
+.descartar:disabled { opacity: .38; cursor: not-allowed; }
+
+.salvar { margin-left: auto; font-size: 14.5px; padding: 12px 20px; }
+
+@media (max-width: 560px) {
+  .fundo { padding: 14px; }
+  .quadro { padding: 20px 18px 16px; }
+  .titulo { font-size: 27px; }
+  .lista { max-height: none; }
+  .pe { flex-direction: column-reverse; align-items: stretch; gap: 14px; }
+  .salvar { margin-left: 0; width: 100%; }
+  .descartar { align-self: center; }
+}
