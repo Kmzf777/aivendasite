@@ -43,6 +43,8 @@ create table if not exists leads (
   nota        numeric,
   avaliacoes  integer,
   instagram   text default '',
+  seguidores  integer,          -- do Instagram. Argumento de venda: 2 mil
+                                -- seguidores e zero site e a conversa inteira.
   site        text default '',
   fechado     boolean not null default false,
 
@@ -62,6 +64,10 @@ create table if not exists leads (
   criado_em   timestamptz not null default now(),
   atualizado_em timestamptz not null default now()
 );
+
+-- Importar duas vezes nao pode duplicar. Verificado nos 117 raspados:
+-- nome sozinho e unico, telefone NAO (3 repetidos), e o par e unico.
+create unique index if not exists leads_chave_natural_idx on leads (nome, coalesce(telefone, ''));
 
 create index if not exists leads_situacao_idx  on leads (situacao);
 create index if not exists leads_vendedor_idx  on leads (vendedor_id);
@@ -118,6 +124,35 @@ create table if not exists eventos (
   criado_em   timestamptz not null default now()
 );
 create index if not exists eventos_lead_idx on eventos (lead_id, criado_em desc);
+
+-- ===================================================================
+-- A dobradiça, garantida pelo banco
+-- ===================================================================
+-- "Qualificado" significa UMA coisa: temos o contato de quem decide.
+-- Sem isto, nada impedia marcar qualificado sem nenhum contato - e a
+-- regra central do produto dependeria de toda tela lembrar dela.
+-- Agora depende do banco, que não esquece.
+--
+-- Ordem obrigatória ao qualificar: grava o contato ANTES de mudar a
+-- situação. É a ordem natural de quem acabou de desligar o telefone.
+create or replace function exigir_contato_para_qualificar()
+returns trigger language plpgsql as $fn$
+begin
+  if new.situacao = 'qualificado'
+     and not exists (select 1 from contatos c where c.lead_id = new.id) then
+    raise exception
+      'Para qualificar é preciso gravar antes o contato de quem decide (nome e telefone do dono ou gerente).'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$fn$;
+
+drop trigger if exists ao_qualificar_lead on leads;
+create constraint trigger ao_qualificar_lead
+  after insert or update of situacao on leads
+  deferrable initially deferred
+  for each row execute function exigir_contato_para_qualificar();
 
 -- ===================================================================
 -- RLS
