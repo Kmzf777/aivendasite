@@ -177,12 +177,14 @@
   cursor: pointer;
   transition: color .14s var(--mola), border-color .14s var(--mola), background .14s var(--mola);
 }
-.seta:hover:not(:disabled) {
+.seta:hover:not(:disabled):not([aria-disabled="true"]) {
   color: var(--tinta);
   background: var(--vazio);
   border-color: var(--linha-viva);
 }
 .seta:disabled { opacity: .26; cursor: not-allowed; }
+/* Gravando: indisponível por um instante, mas ainda focável. */
+.seta[aria-disabled="true"] { opacity: .5; cursor: progress; }
 
 .parado {
   flex: 1;

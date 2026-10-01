@@ -106,9 +106,9 @@ create trigger ao_salvar_lead
 create table if not exists contatos (
   id         uuid primary key default gen_random_uuid(),
   lead_id    uuid not null references leads(id) on delete cascade,
-  nome       text default '',
-  cargo      text default '',
-  telefone   text default '',
+  nome       text not null default '',
+  cargo      text not null default '',
+  telefone   text not null default '',
   e_decisor  boolean not null default true,
   criado_em  timestamptz not null default now()
 );
@@ -120,7 +120,8 @@ create table if not exists eventos (
   lead_id     uuid not null references leads(id) on delete cascade,
   vendedor_id uuid references perfis(id) on delete set null,
   tipo        text not null,
-  nota        text default '',
+  nota        text not null default '',   -- anotacao. NAO confundir com
+                                          -- leads.nota, que e a do Google.
   criado_em   timestamptz not null default now()
 );
 create index if not exists eventos_lead_idx on eventos (lead_id, criado_em desc);
@@ -199,4 +200,11 @@ create policy eventos_leitura on eventos for select to authenticated using (true
 
 drop policy if exists eventos_escrita on eventos;
 create policy eventos_escrita on eventos for insert to authenticated
-  with check (vendedor_id = auth.uid());
+  with check (
+    vendedor_id = auth.uid()
+    and exists (
+      select 1 from leads l
+      where l.id = lead_id
+        and (l.vendedor_id = auth.uid() or l.vendedor_id is null)
+    )
+  );

@@ -168,8 +168,16 @@ export default function CartaoLead({
             type="button"
             id={`seta-tras-${cartao.id}`}
             className={estilo.seta}
-            disabled={!anterior || salvando}
-            onClick={() => anterior && aoMover(cartao.id, anterior, `seta-tras-${cartao.id}`)}
+            // `disabled` só para o que é impossível (não há coluna antes).
+            // Durante a gravação é `aria-disabled`: botão desabilitado perde
+            // o foco, e perder o foco no meio de uma gravação jogaria quem
+            // usa teclado para fora do cartão.
+            disabled={!anterior}
+            aria-disabled={salvando}
+            onClick={() => {
+              if (!anterior || salvando) return;
+              aoMover(cartao.id, anterior, `seta-tras-${cartao.id}`);
+            }}
             aria-label={
               anterior
                 ? `Mover ${cartao.nome} para ${nomeEtapa(anterior)}`
@@ -189,8 +197,12 @@ export default function CartaoLead({
             type="button"
             id={`seta-frente-${cartao.id}`}
             className={estilo.seta}
-            disabled={!proxima || salvando}
-            onClick={() => proxima && aoMover(cartao.id, proxima, `seta-frente-${cartao.id}`)}
+            disabled={!proxima}
+            aria-disabled={salvando}
+            onClick={() => {
+              if (!proxima || salvando) return;
+              aoMover(cartao.id, proxima, `seta-frente-${cartao.id}`);
+            }}
             aria-label={
               proxima
                 ? `Mover ${cartao.nome} para ${nomeEtapa(proxima)}`
