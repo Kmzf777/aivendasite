@@ -872,7 +872,7 @@ Texto do `capture_choice`: `` `${opcao.resposta}\n\n${config.fecho}` ``.
 - [ ] **Step 9: Rodar tudo e ver passar**
 
 Run: `npx vitest run src/lib/bot.test.ts src/lib/botLimites.test.ts`
-Expected: PASS, 9 + 9 + 17 testes.
+Expected: PASS, 33 testes (9 em `botLimites`, 8 em `montarMenu`, 16 em `decidirBot`).
 
 - [ ] **Step 10: Commit**
 
