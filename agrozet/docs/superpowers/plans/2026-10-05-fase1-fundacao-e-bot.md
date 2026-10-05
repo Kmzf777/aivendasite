@@ -1341,7 +1341,7 @@ Depois: carrega `clientes` (`phone, bot_stage`) — **sem upsert, o trigger é o
 - [ ] **Step 6: Verificar**
 
 Run: `npx vitest run src/lib/webhookPayload.test.ts && npm run build && npm run lint`
-Expected: 13 testes PASS, build e lint limpos.
+Expected: 14 testes do bloco + os de `extrairMediaId`, build e lint limpos.
 
 Smoke do handshake:
 Run: `curl "http://localhost:3000/api/webhook?hub.mode=subscribe&hub.verify_token=$META_VERIFY_TOKEN&hub.challenge=42"`
@@ -1492,7 +1492,7 @@ serviço. Para o chip de serviço, escreva um `ServicoChip` dentro de
 - [ ] **Step 6: Verificar**
 
 Run: `npx vitest run src/lib/listaConversas.test.ts && npm run build && npm run lint`
-Expected: 11 testes PASS, build e lint limpos.
+Expected: 10 testes PASS (4 em `estaPendente`, 6 em `montarLista`), build e lint limpos.
 
 - [ ] **Step 7: Commit**
 
@@ -1552,7 +1552,7 @@ git commit -m "feat(agrozet): rotas de envio de mensagem e midia"
 - [ ] **Step 1: Rodar a suíte inteira**
 
 Run: `npm run test`
-Expected: PASS em todos (≈70 testes entre as tasks 5, 6, 8, 9, 10).
+Expected: PASS em todos — 111 testes ao fim da Onda 2.
 
 - [ ] **Step 2: Build e lint**
 

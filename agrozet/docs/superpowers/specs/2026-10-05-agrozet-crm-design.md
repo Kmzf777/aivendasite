@@ -307,6 +307,31 @@ amigável — dá mensagem não entregue, e o cliente fica sem resposta.
 `logOperationalError()` com `origem` no formato `webhook.<funcao>`. Um webhook que
 retorna 500 faz a Meta reentregar em loop.
 
+## Autorizacao: toda rota de API valida a sessao sozinha
+
+**Verificado empiricamente no Next.js 16** (dev server, 2026-10-05): o middleware
+intercepta **paginas** (`/` devolveu 307 para `/login`) mas **nao** intercepta
+Route Handlers, mesmo quando o `matcher` casa o caminho. As tres rotas de API da
+Fase 1 chegaram ao proprio handler e devolveram 401 por codigo proprio. No build
+do Next 16 o middleware aparece como `Proxy`, e o comportamento mudou.
+
+Consequencia que vale para toda rota nova, em qualquer fase:
+
+> **A checagem de sessao dentro da rota nao e defesa em profundidade. E a unica
+> defesa.** Rota de API que confia no middleware esta aberta na internet.
+
+Sem isso, `POST /api/send-message` seria um proxy publico para o WhatsApp do
+petshop, `upload-media` queimaria quota da Meta gravando no Storage com
+`service_role`, e `media-url` assinaria midia de conversa para anonimos.
+
+Padrao obrigatorio: `await getSupabaseServerClient()` + `auth.getUser()`, e 401
+quando nao houver usuario. **Nunca** `getAdminSupabase()` para a checagem — ele
+usa `service_role` e ignora RLS, logo sempre "autoriza".
+
+As excecoes sao `/api/webhook` (autentica pela assinatura HMAC da Meta) e
+`/api/cron/*` (autentica pelo `CRON_SECRET` no header), ambas fora do matcher
+de proposito porque quem as chama nao tem cookie.
+
 ## Telas
 
 | Rota | Quem | O quê |
