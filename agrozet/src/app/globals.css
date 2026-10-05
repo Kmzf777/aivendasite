@@ -1,0 +1,199 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-karla), 'Karla', system-ui, sans-serif;
+  --font-display: var(--font-fraunces), 'Fraunces', Georgia, serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  /* marca, utilizável como bg-laranja / text-vermelho / border-amarelo */
+  --color-laranja: var(--brand-laranja);
+  --color-laranja-escuro: var(--brand-laranja-escuro);
+  --color-amarelo: var(--brand-amarelo);
+  --color-vermelho: var(--brand-vermelho);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  /* ── Pet Shop Agrozet — paleta de marca ──────────────────────────────
+     Amostrada pixel a pixel da logo real do Instagram @agrozetpet
+     (mesma fonte de verdade do site-agrozet). Tema CLARO fixo. */
+  --brand-laranja: #f4601c;   /* laranja da pata — ação primária, acentos */
+  --brand-amarelo: #ffc133;   /* amarelo dos destaques — realce, nunca texto */
+  --brand-vermelho: #8b1005;  /* vermelho do selo — destrutivo, ênfase grave */
+
+  /* Laranja escurecido para TEXTO sobre superfície clara: o #f4601c tem
+     contraste 3.27:1 sobre branco, abaixo do mínimo AA de 4.5:1. */
+  --brand-laranja-escuro: #c2410c; /* 5.2:1 sobre branco */
+
+  /* superfícies quentes (papel/creme), herdadas do site */
+  --paper: #fffcf9;
+  --cream: #fff3e7;
+  --cream-deep: #ffe8d4;
+
+  /* tinta */
+  --ink: #2b1206;
+  --ink-soft: #6b4b36;
+  --ink-faint: #a08670;
+
+  /* ── Tokens semânticos (shadcn) mapeados na marca ── */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+
+  --primary: var(--brand-laranja);
+  /* Marrom-tinta (5.3:1 sobre o laranja) em vez de branco (3.3:1) — ver nota
+     de contraste acima. */
+  --primary-foreground: var(--ink);
+
+  --secondary: var(--cream);
+  --secondary-foreground: #4a2a14;
+  --muted: #f7efe6;
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--cream-deep);
+  --accent-foreground: #4a2a14;
+
+  --destructive: var(--brand-vermelho);
+  --destructive-foreground: #ffffff; /* 9.6:1 sobre o #8b1005 */
+
+  --border: #f0dcc8;
+  --input: #e8d3bd;
+  --ring: var(--brand-laranja);
+  --radius: 0.625rem;
+
+  /* Superfícies de chat estilo WhatsApp — semântica preservada do sistema
+     de referência, recoloridas para o creme do Agrozet. */
+  --chat-surface: #f6ece1;
+  --chat-bubble-out: #ffe3c4;  /* saída: creme-laranja da marca */
+  --chat-bubble-in: #ffffff;
+  --chat-check: #0b7cc4;
+
+  /* Sidebar = console: fundo vermelho profundo da marca, item ativo em laranja */
+  --sidebar: #4a0d04;
+  --sidebar-foreground: #f8e6d8;
+  --sidebar-primary: var(--brand-laranja);
+  --sidebar-primary-foreground: #2b1206;
+  --sidebar-accent: #6b1a08;
+  --sidebar-accent-foreground: #ffeedd;
+  --sidebar-border: rgb(255 255 255 / 10%);
+  --sidebar-ring: var(--brand-laranja);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply antialiased;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1, h2, h3 {
+    @apply font-display;
+    font-variation-settings: "SOFT" 40, "WONK" 1, "opsz" 80;
+    letter-spacing: -0.02em;
+  }
+  /* Dígitos tabulares por padrão na mono (dados, valores, telefones) */
+  .font-mono, code, kbd, samp {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--brand-laranja) 35%, transparent);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--brand-laranja); }
+
+/* Scrollbar quase invisível para a thread de conversa */
+.scroll-soft { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.scroll-soft::-webkit-scrollbar-thumb { background: transparent; transition: background 0.2s; }
+.scroll-soft:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-faint) 55%, transparent);
+}
+
+/* Papel de parede do chat: creme quente + textura pontilhada discreta */
+.chat-wallpaper {
+  background-color: var(--chat-surface);
+  background-image:
+    radial-gradient(color-mix(in srgb, var(--ink) 5%, transparent) 1px, transparent 1.4px);
+  background-size: 20px 20px;
+}
+
+/* Grão de papel sutil — evita o "flat" de template, como no site-agrozet.
+   Aplicar na superfície que deve parecer papel. */
+.grain::before {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: 1; pointer-events: none; opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── Movimento: revelação orquestrada ── */
+@keyframes agrozet-rise {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes agrozet-slide {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.reveal-rise { animation: agrozet-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.reveal-slide { animation: agrozet-slide 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-rise, .reveal-slide { animation: none !important; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Destaque da mensagem original ao clicar numa citação de reply (como no WhatsApp). */
+@keyframes reply-highlight {
+  from { background: color-mix(in srgb, var(--brand-amarelo) 45%, transparent); }
+  to { background: transparent; }
+}
+.reply-highlight {
+  animation: reply-highlight 1.5s ease-out;
+  border-radius: 8px;
+}

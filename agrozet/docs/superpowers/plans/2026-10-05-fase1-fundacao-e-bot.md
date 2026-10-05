@@ -157,12 +157,59 @@ export function caminhoMidia(messageId: string, mime: string): string
 export async function armazenarMidia(mediaId: string, messageId: string): Promise<{ path: string; mime: string } | null>
 ```
 
+### Clientes Supabase — nomes reais (Onda 0, Task 3)
+
+```ts
+// supabase-browser.ts
+export function getSupabaseBrowserClient(): SupabaseClient<Database>   // singleton
+
+// supabase-server.ts
+export async function getSupabaseServerClient(): Promise<SupabaseClient<Database>>  // ASYNC: precisa de await
+
+// supabaseAdmin.ts  — service_role, ignora RLS. Só webhook e cron.
+export function getAdminSupabase(): SupabaseClient<Database>
+
+// utils.ts
+export function cn(...)        // clsx + tailwind-merge
+export function toTitleCase(s: string): string
+export function getFirstName(s: string): string
+```
+
+`getSupabaseServerClient` ser `async` é fácil de esquecer e dá erro de tipo
+silencioso (`Promise<Client>.from` não existe). Sempre `await`.
+
 ### `src/lib/errorLog.ts`
 
 ```ts
 /** origem no formato 'modulo.funcao'. NUNCA lança: erro aqui não pode derrubar o chamador. */
 export async function logOperationalError(origem: string, mensagem: string, contexto?: unknown): Promise<void>
 ```
+
+### Primitivos de UI — o que existe de verdade (Onda 0, Task 4)
+
+Todos em `src/components/ui/`, via `@base-ui/react`, composição por `render`
+(**nunca `asChild`**). Named exports, exceto onde indicado:
+
+`alert` (Alert, AlertTitle, AlertDescription, AlertAction) · `avatar` (Avatar,
+AvatarImage, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarBadge) ·
+`button` (Button, buttonVariants) · `card` (Card, CardHeader, CardFooter,
+CardTitle, CardAction, CardDescription, CardContent) · `dialog` (Dialog,
+DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
+DialogOverlay, DialogPortal, DialogTitle, DialogTrigger) · `dropdown-menu` ·
+`input` (Input) · `scroll-area` (ScrollArea, ScrollBar) · `separator`
+(Separator) · `skeleton` (Skeleton) · `sonner` (Toaster) · `table` (Table,
+TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell,
+TableCaption) · `tooltip` (Tooltip, TooltipTrigger, TooltipContent,
+TooltipProvider).
+
+**`badge` é `export default`** e é um pill de contador, não um badge de rótulo.
+Ver a nota na Task 10.
+
+**Cor:** `<Button>` primário é laranja `#f4601c` com texto **marrom-escuro**
+`#2b1206`, não branco — branco sobre esse laranja dá 3,27:1, abaixo do AA de
+4,5:1. Para laranja como TEXTO use `text-laranja-escuro` (`#c2410c`, 5,21:1).
+O amarelo `#ffc133` é só preenchimento/acento e nunca recebe texto claro.
+Fontes: `font-display` = Fraunces (títulos), `font-sans` = Karla (corpo).
 
 ### Tabelas e colunas
 
@@ -958,7 +1005,7 @@ Copiar `../mar-azul-system-main/middleware.ts`. Manter o refresh de sessão do `
 ```ts
 'use client'
 import { useQuery } from '@tanstack/react-query'
-import { getBrowserSupabase } from '@/lib/supabase-browser'
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 /** admin = role 'admin' no user_metadata, a mesma fonte que a funcao is_admin() do banco le. */
 export function useIsAdmin() {
@@ -966,7 +1013,7 @@ export function useIsAdmin() {
     queryKey: ['is-admin'],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data } = await getBrowserSupabase().auth.getUser()
+      const { data } = await getSupabaseBrowserClient().auth.getUser()
       return data.user?.user_metadata?.role === 'admin'
     },
   })
@@ -1429,7 +1476,15 @@ Realtime do Supabase fica para a Fase 2: um `refetchInterval` de 15 s resolve a 
 
 - [ ] **Step 5: Componentes**
 
-`ConversationList`: coluna esquerda, badge laranja de pendente, `Badge` com a etiqueta do `ultimoServico`.
+`ConversationList`: coluna esquerda, pill laranja de pendente, chip com a etiqueta do `ultimoServico`.
+
+**Atenção ao `components/ui/badge.tsx`:** ele NÃO é o Badge com `variant` do
+shadcn. É um pill de contador, `export default`, props
+`{ count?: number; children?: ReactNode; className?: string }`, e devolve `null`
+quando `count <= 0` ou não há filhos. Serve para o indicador de pendente
+(`import Badge from '@/components/ui/badge'`), **não** para a etiqueta de
+serviço. Para o chip de serviço, escreva um `ServicoChip` dentro de
+`src/components/conversations/` — é seu, não mexa em `ui/`.
 `ChatHeader`: nome ou telefone formatado + etiqueta do serviço.
 `MessageTimeline` + `MessageBubble`: `inbound` à esquerda, `outbound` à direita; `message_type: 'interactive'` renderiza o corpo mais os botões como chips desabilitados, para o atendente ver o que o cliente viu; imagem só busca `/api/media-url` **quando o balão entra em viewport**, e mídia com `media_path` nulo mostra "mídia expirada".
 `MessageComposer`: textarea + envio por Enter + anexo de imagem. Desabilitado com aviso quando a janela de 24 h estiver fechada (`janela24h.ts`) — fora dela a Meta só aceita template.
