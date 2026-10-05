@@ -124,7 +124,19 @@ CREATE TABLE IF NOT EXISTS public.bot_config (
   rodape      text,
   fecho       text        NOT NULL,   -- enviado depois da escolha
   updated_at  timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT bot_config_singleton_check CHECK (id = 1)
+  CONSTRAINT bot_config_singleton_check CHECK (id = 1),
+  -- Mesmos limites da Meta de `bot_opcoes`, pelo mesmo motivo (ver abaixo), e
+  -- com um agravante: na Fase 1 NAO EXISTE tela /bot, logo a unica forma de
+  -- editar estes campos e SQL na mao — justamente o caminho que nao passa por
+  -- validacao nenhuma. Um rodape de 89 caracteres faria TODO menu interativo
+  -- voltar 400 da Meta, indefinidamente: nenhum cliente novo seria saudado, o
+  -- outbound seria gravado como se tivesse saido, e o unico sinal estaria em
+  -- `operational_errors`, tabela sem tela na Fase 1.
+  --   saudacao/fecho <= 1024  chars: limite do corpo de mensagem
+  --   rodape         <=   60  chars: limite do footer
+  CONSTRAINT bot_config_saudacao_len_check CHECK (char_length(saudacao) <= 1024),
+  CONSTRAINT bot_config_fecho_len_check    CHECK (char_length(fecho) <= 1024),
+  CONSTRAINT bot_config_rodape_len_check   CHECK (rodape IS NULL OR char_length(rodape) <= 60)
 );
 
 -- ---------------------------------------------------------------- bot_opcoes

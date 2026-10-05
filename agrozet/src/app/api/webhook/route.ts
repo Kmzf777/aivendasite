@@ -77,6 +77,15 @@ function normalizarStage(valor: string | null): BotStage | null {
   return valor === 'awaiting_choice' || valor === 'done' ? valor : null
 }
 
+// O download de midia da Meta roda DENTRO desta requisicao (a URL do media_id
+// expira em minutos), e o default de funcao Node na Vercel e 10 s. Um video de
+// 12 MB no primeiro contato estouraria o default: a Meta nao receberia 200,
+// reentregaria, e a reentrega bate no gate de idempotencia e sai sem efeito —
+// o cliente NUNCA receberia a saudacao, e o unico rastro seria um timeout na
+// Vercel, nada em `operational_errors`. 60 s da folga para midia grande sem
+// deixar uma requisicao presa por minutos.
+export const maxDuration = 60
+
 // ---------------------------------------------------------------- GET
 /**
  * Handshake de verificação da Meta. Ela chama este GET uma vez, ao assinar o
@@ -128,20 +137,32 @@ async function processar(payload: unknown): Promise<void> {
   // (a) STATUSES ANTES DAS MENSAGENS. São baratos, independentes e um erro
   // aqui não pode impedir que a mensagem do cliente seja gravada.
   for (const s of extrairStatuses(payload)) {
-    try {
-      await getAdminSupabase()
-        .from('messages')
-        .update({ delivery_status: s.status })
-        // Último a chegar vence. A Meta manda sent -> delivered -> read em
-        // ordem na prática; uma label fora de ordem é cosmética e não vale
-        // uma leitura extra por status.
-        .eq('message_id', s.messageId)
-    } catch (e) {
-      await logOperationalError(
-        'webhook.statuses',
-        e instanceof Error ? e.message : String(e),
-        { messageId: s.messageId, status: s.status }
-      )
+    // `failed` NUNCA é sobrescrito. Entre sent/delivered/read uma label fora
+    // de ordem é cosmética, mas deixar uma reentrega de `sent` apagar um
+    // `failed` faz a atendente acreditar que a mensagem saiu quando ela não
+    // saiu — e ela não reenvia. Esse é o único estado que muda a decisão de
+    // quem está atendendo, então é o único que ganha guarda.
+    const base = getAdminSupabase()
+      .from('messages')
+      .update({ delivery_status: s.status })
+      .eq('message_id', s.messageId)
+
+    // supabase-js NÃO lança em erro de PostgREST, então o try/catch sozinho
+    // não vê falha de banco: o `error` tem de ser lido. Sem isso o status se
+    // perde em silêncio e não há como diagnosticar no primeiro dia real.
+    // `delivery_status.is.null` no OR não é redundante: `delivery_status`
+    // nasce NULL, e em SQL `NULL <> 'failed'` é NULL (não true), então um
+    // `.neq()` sozinho não casaria a linha e o PRIMEIRO status de toda
+    // mensagem seria descartado.
+    const { error } = await (s.status === 'failed'
+      ? base
+      : base.or('delivery_status.is.null,delivery_status.neq.failed'))
+
+    if (error) {
+      await logOperationalError('webhook.statuses', error.message, {
+        messageId: s.messageId,
+        status: s.status,
+      })
     }
   }
 
@@ -207,10 +228,21 @@ async function processarMensagem(m: MensagemWebhook): Promise<void> {
   if (mediaId) {
     const guardada = await armazenarMidia(mediaId, m.messageId)
     if (guardada) {
-      await admin
+      // Ler o `error` importa: a foto ja foi baixada, comprimida e gravada no
+      // bucket. Se este UPDATE falhar em silencio, a linha nao aponta para o
+      // objeto — a timeline mostra "midia expirada" e o arquivo fica ORFAO
+      // consumindo o 1 GB do plano free, sem nenhum registro de que existe.
+      const { error: erroMidia } = await admin
         .from('messages')
         .update({ media_path: guardada.path, media_mime: guardada.mime })
         .eq('message_id', m.messageId)
+
+      if (erroMidia) {
+        await logOperationalError('webhook.vincularMidia', erroMidia.message, {
+          messageId: m.messageId,
+          path: guardada.path,
+        })
+      }
     }
   }
 
@@ -220,11 +252,27 @@ async function processarMensagem(m: MensagemWebhook): Promise<void> {
   // cada mensagem nova revertia a correção manual do atendente para o nome de
   // exibição do WhatsApp. É por isso que `m.profileName` é lido do payload e
   // deliberadamente NÃO é gravado.
-  const { data: cliente } = await admin
+  // O `error` NÃO PODE SER DESCARTADO AQUI. `clienteExiste` é derivado de
+  // `bot_stage IS NULL` (ver abaixo), então uma leitura que falha devolve
+  // `data: null` e o bot conclui "cliente novo" — o lado ERRADO para errar.
+  //
+  // Cenário: cliente que já escolheu um serviço (`bot_stage = 'done'`) está
+  // conversando com a atendente há 10 minutos; uma leitura falha por timeout
+  // (ou porque o projeto free estava acordando da pausa por inatividade); o
+  // bot dispara a saudação com o menu no meio do atendimento humano.
+  //
+  // Abortar perde no máximo uma saudação, e a próxima mensagem do cliente
+  // refaz o fluxo. Seguir em frente manda mensagem indevida a cliente real.
+  const { data: cliente, error: erroCliente } = await admin
     .from('clientes')
     .select('phone, bot_stage')
     .eq('phone', phone)
     .maybeSingle()
+
+  if (erroCliente) {
+    await logOperationalError('webhook.lerCliente', erroCliente.message, { phone })
+    return
+  }
 
   // COMO `clienteExiste` É DECIDIDO, e por que não é `!!cliente`:
   //
@@ -253,21 +301,36 @@ async function processarMensagem(m: MensagemWebhook): Promise<void> {
   // (e) CONFIG + OPÇÕES. Todas as opções, ordenadas por `ordem`: é `montarMenu`
   // que filtra as inativas, e ele também precisa saber quantas existem para
   // escolher entre reply buttons e lista.
-  const { data: configRow } = await admin
+  const { data: configRow, error: erroConfig } = await admin
     .from('bot_config')
     .select('ativo, saudacao, rodape, fecho')
     .eq('id', 1)
     .maybeSingle()
 
-  if (!configRow) {
-    await logOperationalError('webhook.botConfig', 'bot_config id=1 nao encontrada', { phone })
+  if (erroConfig || !configRow) {
+    // Distinguir "falhou a leitura" de "a linha nao existe" e nao reportar a
+    // causa errada: sem isso, uma falha de banco apareceria como configuracao
+    // ausente e mandaria quem investiga para o lugar errado.
+    await logOperationalError(
+      'webhook.botConfig',
+      erroConfig ? erroConfig.message : 'bot_config id=1 nao encontrada',
+      { phone }
+    )
     return
   }
 
-  const { data: opcoesRows } = await admin
+  const { data: opcoesRows, error: erroOpcoes } = await admin
     .from('bot_opcoes')
     .select('botao_id, titulo, resposta, ordem, ativo')
     .order('ordem', { ascending: true })
+
+  if (erroOpcoes) {
+    // Seguir com `opcoes = []` faria `montarMenu` devolver null e o log diria
+    // "nenhuma opcao de menu ativa" — a causa ERRADA. O menu existe; foi a
+    // leitura que falhou.
+    await logOperationalError('webhook.botOpcoes', erroOpcoes.message, { phone })
+    return
+  }
 
   const config: BotConfig = configRow
   const opcoes: BotOpcao[] = opcoesRows ?? []
@@ -293,9 +356,23 @@ async function processarMensagem(m: MensagemWebhook): Promise<void> {
 
   if (saida.acao === 'none') return
 
-  // (f) A TRANSIÇÃO, com UPDATE CONDICIONAL. `stageEsperado` é a defesa extra
-  // contra reentrância: duas entregas simultâneas da mesma mensagem não podem
-  // avançar o estado duas vezes, porque a segunda não casa o `WHERE`.
+  // (f) A TRANSIÇÃO, com UPDATE CONDICIONAL. `stageEsperado` é a defesa contra
+  // reentrância: duas entregas CONCORRENTES não podem avançar o estado duas
+  // vezes, porque a segunda não casa o `WHERE`.
+  //
+  // O `.select('phone')` NÃO É DECORATIVO E NÃO PODE SER REMOVIDO. O
+  // supabase-js não lança em erro de PostgREST e não informa quantas linhas o
+  // UPDATE afetou sem um `.select()` — sem ele, "o WHERE não casou" e "o WHERE
+  // casou" são indistinguíveis, e o envio em (g) sairia nos dois casos.
+  //
+  // O estado estaria protegido e a MENSAGEM não, que é justamente o que o
+  // cliente vê e o que a Meta cobra. Cenário real: cliente novo manda "oi" e
+  // "bom dia" em 200 ms; a Meta entrega os dois em requisições concorrentes;
+  // ambas passam o gate de idempotência (message_id diferentes), ambas leem
+  // `bot_stage = null`, ambas decidem `start`. Uma casa o UPDATE, a outra
+  // afeta 0 linhas SEM ERRO — e mandaria a segunda saudação. O caso
+  // sequencial é coberto pela janela de leitura de 10 s; a concorrência é o
+  // único motivo de `stageEsperado` existir, então ela tem de ser fechada aqui.
   if (saida.proximoStage) {
     const patch =
       saida.acao === 'capture_choice' && saida.servico
@@ -303,11 +380,13 @@ async function processarMensagem(m: MensagemWebhook): Promise<void> {
         : { bot_stage: saida.proximoStage }
 
     const base = admin.from('clientes').update(patch).eq('phone', phone)
-    const { error } = await (saida.stageEsperado === null
-      ? base.is('bot_stage', null)
-      : saida.stageEsperado !== undefined
-        ? base.eq('bot_stage', saida.stageEsperado)
-        : base)
+    const { data: afetadas, error } = await (
+      saida.stageEsperado === null
+        ? base.is('bot_stage', null)
+        : saida.stageEsperado !== undefined
+          ? base.eq('bot_stage', saida.stageEsperado)
+          : base
+    ).select('phone')
 
     if (error) {
       await logOperationalError('webhook.transicao', error.message, {
@@ -315,6 +394,15 @@ async function processarMensagem(m: MensagemWebhook): Promise<void> {
         acao: saida.acao,
         proximoStage: saida.proximoStage,
       })
+      // Falha de escrita do estado: não envie. Enviar sem ter avançado o
+      // `bot_stage` faz a próxima mensagem do cliente repetir a mesma ação.
+      return
+    }
+
+    if (!afetadas?.length) {
+      // Outra invocação concorrente já fez esta transição. Sair sem enviar é
+      // o ponto inteiro deste bloco.
+      return
     }
   }
 

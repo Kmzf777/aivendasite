@@ -107,6 +107,8 @@ const MAX_TITULO_BOTAO = 20
 const MAX_ITENS_LISTA = 10
 const MAX_TITULO_ITEM = 24
 const MAX_ROTULO_LISTA = 20
+const MAX_CORPO = 1024
+const MAX_RODAPE = 60
 
 /** Payload puro, exportado para teste sem rede. */
 export function buildInteractivePayload(to: string, menu: BotMenu): Record<string, unknown> {
@@ -119,6 +121,17 @@ export function buildInteractivePayload(to: string, menu: BotMenu): Record<strin
   // `footer: undefined` sobreviveria ao JSON.stringify como ausente mas quebraria
   // a igualdade estrutural esperada pelos testes.
   const footer = menu.rodape ? { footer: { text: menu.rodape } } : {}
+
+  // Corpo e rodape vem de `bot_config`, nao de `bot_opcoes` — e sao os dois
+  // unicos textos do menu que, antes da migration ganhar CHECK, podiam chegar
+  // aqui com qualquer tamanho. Validar nos dois lados e a regra do projeto:
+  // estourar na Meta nao devolve erro amigavel, devolve mensagem nao entregue.
+  if (menu.corpo.length > MAX_CORPO) {
+    throw new Error(`corpo do menu excede ${MAX_CORPO} caracteres (${menu.corpo.length})`)
+  }
+  if (menu.rodape && menu.rodape.length > MAX_RODAPE) {
+    throw new Error(`rodape "${menu.rodape}" excede ${MAX_RODAPE} caracteres`)
+  }
 
   if (menu.formato === 'button') {
     if (menu.botoes.length < 1) throw new Error('interactive precisa de pelo menos 1 botao')

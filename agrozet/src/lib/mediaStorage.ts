@@ -44,6 +44,36 @@ export function caminhoMidia(messageId: string, mime: string): string {
   return `${base}.${EXTENSAO[mime.split(';')[0]] ?? 'bin'}`
 }
 
+/**
+ * Teto de bytes para midia RECEBIDA. Imagem e comprimida depois (fator ~20x),
+ * entao 20 MB de entrada cabem folgados; nao-imagem e gravada crua e este e o
+ * limite que protege o 1 GB do Storage free.
+ */
+export const MAX_BYTES_MIDIA = 20 * 1024 * 1024
+
+/**
+ * `Content-Length` da midia sem baixar o corpo, via HEAD. Devolve `null` quando
+ * a Meta nao informa (ou o HEAD falha) — nao e erro, e o chamador cai no
+ * segundo teto, depois do download.
+ *
+ * O header `Authorization` vai aqui tambem: a URL da midia da Meta responde 401
+ * sem ele, inclusive no HEAD.
+ */
+async function tamanhoDaMidia(url: string): Promise<number | null> {
+  try {
+    const res = await fetch(url, {
+      method: 'HEAD',
+      headers: { Authorization: `Bearer ${process.env.META_TOKEN}` },
+    })
+    const len = res.headers.get('content-length')
+    if (!len) return null
+    const n = Number(len)
+    return Number.isFinite(n) && n >= 0 ? n : null
+  } catch {
+    return null
+  }
+}
+
 /** Baixa da Meta, comprime se imagem, grava no Storage. Devolve o path ou null. */
 export async function armazenarMidia(
   mediaId: string,
@@ -51,7 +81,43 @@ export async function armazenarMidia(
 ): Promise<{ path: string; mime: string } | null> {
   try {
     const { url, mime } = await getMetaMediaUrl(mediaId)
+
+    // TETO DE BYTES ANTES DE BAIXAR. Sem isso o caminho inbound — o unico que o
+    // CLIENTE controla — nao tem limite nenhum, enquanto `/api/upload-media` (o
+    // atendente) tem 5 MB. Assimetria errada: a Meta aceita do cliente video e
+    // documento de dezenas de MB.
+    //
+    // Dois custos, os dois reais no plano free. (1) Storage: o `else` abaixo
+    // grava nao-imagem CRUA, entao um PDF de 60 MB come 6% do 1 GB numa
+    // mensagem. (2) Tempo: o buffer inteiro passa pela memoria da funcao dentro
+    // da requisicao do webhook, e estourar o `maxDuration` faz a Meta nao
+    // receber 200 e reentregar — e a reentrega bate no gate de idempotencia e
+    // sai sem efeito, ou seja, o cliente NUNCA e saudado.
+    //
+    // Mídia grande demais vira `null`: a mensagem fica na timeline sem anexo e
+    // o atendente pede pro cliente reenviar menor. A conversa continua.
+    const tamanho = await tamanhoDaMidia(url)
+    if (tamanho !== null && tamanho > MAX_BYTES_MIDIA) {
+      await logOperationalError(
+        'mediaStorage.midiaGrande',
+        `midia de ${tamanho} bytes acima do teto de ${MAX_BYTES_MIDIA}`,
+        { mediaId, messageId, mime, tamanho }
+      )
+      return null
+    }
+
     const bruto = await downloadMetaMedia(url)
+
+    // Segunda checagem: a Meta pode nao mandar `Content-Length` (`tamanho`
+    // null), e nesse caso o teto so pode ser aplicado com os bytes na mao.
+    if (bruto.byteLength > MAX_BYTES_MIDIA) {
+      await logOperationalError(
+        'mediaStorage.midiaGrande',
+        `midia de ${bruto.byteLength} bytes acima do teto de ${MAX_BYTES_MIDIA} (sem Content-Length)`,
+        { mediaId, messageId, mime }
+      )
+      return null
+    }
 
     let corpo: Buffer
     let mimeFinal: string
