@@ -198,15 +198,20 @@ operational_errors(id uuid pk, origem text not null, mensagem text not null,
 ### Trigger: `messages` é o dono do cadastro base
 
 `AFTER INSERT ON messages` -> `sync_cliente_from_message()`: para
-`direction='inbound'`, faz upsert em `clientes` por `phone` preenchendo o nome
-com **`COALESCE(clientes.nome, EXCLUDED.nome)`** e
-`ultima_interacao_at = GREATEST(...)`.
+`direction='inbound'`, faz upsert em `clientes` por `phone` gravando
+`primeiro_contato_at` na criação e `ultima_interacao_at = GREATEST(...)` sempre.
 
-O `COALESCE` nessa ordem é deliberado: preenche o nome só enquanto está nulo,
-depois fica fixo. Invertido, cada mensagem nova reverteria um nome corrigido à
-mão pelo atendente para o nome de exibição do WhatsApp. **O webhook não faz
-upsert de cliente** — um segundo escritor foi exatamente a causa do clobber no
-Mar Azul.
+**O trigger não escreve `nome`, e isso é deliberado.** O nome de exibição do
+WhatsApp chega no payload do webhook (`contacts[].profile.name`), não na linha
+de `messages` — o trigger nem tem acesso ao dado. Na Fase 1 a conversa é
+identificada pelo telefone; o `nome` entra só pela tela de clientes (Fase 2),
+digitado por um atendente.
+
+O efeito colateral é a propriedade que a gente quer: **nada sobrescreve um nome
+digitado à mão.** No Mar Azul o webhook e o trigger escreviam o nome os dois, e
+cada mensagem nova revertia a correção do atendente para o nome de exibição do
+WhatsApp. Aqui o trigger é o dono único da criação do cliente e **o webhook
+nunca faz upsert em `clientes`**.
 
 ## O bot de botão — `src/lib/bot.ts`
 
