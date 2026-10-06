@@ -1,5 +1,7 @@
 'use client'
 
+import { ArrowLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { WINDOW_COLORS, type WindowStatus } from '@/lib/janela24h'
 import { formatarTelefoneBr } from '@/lib/listaConversas'
@@ -12,16 +14,37 @@ type Props = {
   ultimoServico: string | null
   /** Calculado no relógio único de `Conversations` — o cabeçalho não tem timer próprio. */
   janela: WindowStatus
+  /** Tela estreita: volta para a lista. A partir de `md` o botão não aparece. */
+  onVoltar?: () => void
 }
 
-export default function ChatHeader({ phone, nome, ultimoServico, janela }: Props) {
+export default function ChatHeader({
+  phone,
+  nome,
+  ultimoServico,
+  janela,
+  onVoltar,
+}: Props) {
   const telefone = formatarTelefoneBr(phone)
 
   return (
-    <header className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-5 py-3">
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
+      {onVoltar && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Voltar para a lista de conversas"
+          onClick={onVoltar}
+          className="-ml-1 shrink-0 md:hidden"
+        >
+          <ArrowLeft />
+        </Button>
+      )}
+
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <h1 className="truncate font-display text-base leading-tight">
+          <h1 className="truncate text-sm font-semibold tracking-tight">
             {nome ? toTitleCase(nome) : telefone}
           </h1>
           {ultimoServico && <ServicoChip botaoId={ultimoServico} />}
@@ -29,7 +52,9 @@ export default function ChatHeader({ phone, nome, ultimoServico, janela }: Props
         {/* Com nome no cadastro o telefone vira a segunda linha: o atendente
             ainda precisa dele para conferir que abriu a conversa certa. */}
         {nome && (
-          <p className="truncate font-mono text-[11px] text-muted-foreground">{telefone}</p>
+          <p className="truncate font-mono text-[11px] tabular-nums text-muted-foreground">
+            {telefone}
+          </p>
         )}
       </div>
 
@@ -38,13 +63,19 @@ export default function ChatHeader({ phone, nome, ultimoServico, janela }: Props
       <Tooltip>
         <TooltipTrigger
           render={
-            <div className="flex shrink-0 cursor-default items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1">
+            <div className="flex shrink-0 cursor-default items-center gap-1.5 rounded-md border border-border bg-muted px-2 py-1">
               <span
                 aria-hidden
-                className="size-2 rounded-full"
+                className="size-1.5 rounded-full"
                 style={{ background: WINDOW_COLORS[janela.statusColor] }}
               />
-              <span className="font-mono text-[11px] text-muted-foreground">
+              {/* `timeLeft` sai do relógio do navegador e o servidor renderiza
+                  num instante anterior — mesma divergência de hidratação da
+                  coluna de horário da lista, mesmo remédio. */}
+              <span
+                suppressHydrationWarning
+                className="font-mono text-[11px] tabular-nums text-muted-foreground"
+              >
                 {janela.isOpen ? janela.timeLeft : 'fechada'}
               </span>
             </div>

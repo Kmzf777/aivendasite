@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: 'Disparos · CRM Agrozet',
 }
 
-// MAQUETE: não existe `scheduled_disparos`, nem a rota que agenda, nem o cron
-// que envia — é a Fase 3 inteira. A tela diz isso em cima, antes da tabela.
+// A tela é inteira client-side: a fila e o cancelamento vivem no estado do
+// componente, então a página só monta o componente.
 export default function DisparosPage() {
   return <Disparos />
 }

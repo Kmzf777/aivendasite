@@ -16,6 +16,11 @@ type Props = {
 
 // "Hoje" / "Ontem" / data longa. O atendente lê a timeline de cima para baixo e
 // precisa saber que o "oi" de cima é de outra semana.
+//
+// HIDRATAÇÃO: `new Date()` e o fuso do runtime entram no resultado, então
+// servidor e cliente podem discordar (virada de dia entre os dois renders, ou
+// Node em UTC e browser em America/Sao_Paulo). O rótulo é renderizado com
+// `suppressHydrationWarning` — ver a divisória de dia lá embaixo.
 function rotuloDoDia(iso: string): string {
   const d = new Date(iso)
   const hoje = new Date()
@@ -83,16 +88,19 @@ export default function MessageTimeline({
   const grupos = agruparPorDia(mensagens)
 
   return (
-    <div className="chat-wallpaper scroll-soft min-h-0 flex-1 space-y-1 overflow-y-auto px-5 py-6">
+    // `bg-[var(--chat-surface)]` em vez de uma classe utilitária de papel de
+    // parede: a superfície da conversa é só um tom neutro a menos que o `card`,
+    // o suficiente para separar a leitura do cabeçalho e do composer.
+    <div className="scroll-soft min-h-0 flex-1 overflow-y-auto bg-[var(--chat-surface)] px-4 py-4">
       {carregando ? (
         <div className="flex h-full items-center justify-center">
-          <Loader2 className="size-6 animate-spin text-primary" />
+          <Loader2 aria-label="Carregando" className="size-5 animate-spin text-muted-foreground" />
         </div>
       ) : erro ? (
         // Erro de carga não é conversa vazia: dizer "nenhuma mensagem" aqui
         // faria o atendente responder sem ver o que o cliente escreveu.
-        <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-          <AlertCircle className="size-6 text-destructive" />
+        <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
+          <AlertCircle aria-hidden className="size-5 text-destructive" />
           <div>
             <p className="text-sm font-medium">Não foi possível carregar o histórico</p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -103,7 +111,7 @@ export default function MessageTimeline({
             <button
               type="button"
               onClick={onRecarregar}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
               Tentar novamente
             </button>
@@ -116,14 +124,16 @@ export default function MessageTimeline({
       ) : (
         grupos.map((g) => (
           <div key={g.chave}>
-            <div className="my-4 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="rounded-full bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            <div className="sticky top-0 z-10 flex justify-center py-2">
+              <span
+                // Ver a nota de HIDRATAÇÃO em `rotuloDoDia`.
+                suppressHydrationWarning
+                className="rounded border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+              >
                 {g.rotulo}
               </span>
-              <div className="h-px flex-1 bg-border" />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {g.msgs.map((m) => (
                 <MessageBubble key={m.id} msg={m} />
               ))}

@@ -21,7 +21,7 @@
 //    mudar, muda nos dois ao mesmo tempo.
 //
 // 4. O ESTADO SEMEADO É CÓPIA, nunca referência aos arrays de
-//    `@/lib/demo/dados`. Se o store mutasse aqueles arrays, `reiniciar()`
+//    `@/lib/mock/dados`. Se o store mutasse aqueles arrays, `reiniciar()`
 //    reaplicaria o estado já corrompido — ou seja, não restauraria nada. O
 //    teste `isolamento do seed` existe só para isso.
 //
@@ -34,7 +34,7 @@
 // compilação, então o cliente Supabase daquele módulo nunca é carregado.
 
 import type { BotConfig, BotOpcao } from '@/lib/bot'
-import { BOT_CONFIG_DEMO, BOT_OPCOES_DEMO, CONVERSAS_DEMO } from '@/lib/demo/dados'
+import { BOT_CONFIG_DEMO, BOT_OPCOES_DEMO, CONVERSAS_DEMO } from '@/lib/mock/dados'
 import type { MensagemTimeline } from '@/hooks/useMensagens'
 import { montarLista, type ItemConversa } from '@/lib/listaConversas'
 
@@ -321,7 +321,7 @@ export function salvarCliente(
 }
 
 /**
- * Volta tudo ao estado semeado de `@/lib/demo/dados`. Serve ao botão de
+ * Volta tudo ao estado semeado de `@/lib/mock/dados`. Serve ao botão de
  * reiniciar a demonstração e à isolação entre testes.
  *
  * Conta como escrita: notifica, para as telas abertas voltarem ao estado

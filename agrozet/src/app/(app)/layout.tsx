@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import FaixaMock from '@/components/FaixaMock'
 import Sidebar from '@/components/Sidebar'
 import { MODO_MOCK } from '@/lib/mock/modo'
 import { getSupabaseServerClient } from '@/lib/supabase-server'
@@ -30,12 +29,9 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      {MODO_MOCK && <FaixaMock />}
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="min-w-0 flex-1 overflow-hidden">{children}</main>
-      </div>
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar />
+      <main className="min-w-0 flex-1 overflow-hidden">{children}</main>
     </div>
   )
 }

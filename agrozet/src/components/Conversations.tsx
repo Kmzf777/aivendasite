@@ -10,6 +10,7 @@ import MessageTimeline from '@/components/conversations/MessageTimeline'
 import { useConversas } from '@/hooks/useConversas'
 import { useMensagens } from '@/hooks/useMensagens'
 import { getWindowStatus } from '@/lib/janela24h'
+import { cn } from '@/lib/utils'
 
 /**
  * Tela de atendimento: lista à esquerda, conversa à direita.
@@ -18,6 +19,10 @@ import { getWindowStatus } from '@/lib/janela24h'
  * atendentes veem todas as conversas. Isso é o que elimina transferência de
  * conversa, filtro por instância e contador de não-lidas por usuário — não há
  * "minhas conversas" para separar de "as dela".
+ *
+ * Em tela estreita as duas colunas não cabem lado a lado: a lista e a conversa
+ * se alternam pela MESMA seleção que já existe (`selecionado`), sem segundo
+ * estado para dessincronizar. A partir de `md` as duas aparecem juntas.
  */
 export default function Conversations() {
   const [selecionado, setSelecionado] = useState<string | null>(null)
@@ -72,14 +77,21 @@ export default function Conversations() {
         onBuscaChange={setBusca}
       />
 
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <section
+        className={cn(
+          'flex min-h-0 min-w-0 flex-1 flex-col',
+          // Sem conversa aberta, em tela estreita, o espaço é todo da lista.
+          !selecionado && 'hidden md:flex'
+        )}
+      >
         {!selecionado ? (
-          <div className="chat-wallpaper flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
-            <MessageSquare aria-hidden className="size-8 text-laranja-escuro opacity-70" />
+          <div className="flex h-full flex-col items-center justify-center gap-3 bg-[var(--chat-surface)] px-4 text-center">
+            <MessageSquare aria-hidden className="size-7 text-muted-foreground" />
             <div>
-              <p className="font-display text-lg">Escolha uma conversa</p>
-              <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                Quem está esperando resposta aparece no topo da lista, com o ponto laranja.
+              <p className="text-sm font-medium">Escolha uma conversa</p>
+              <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+                Quem está esperando resposta aparece no topo da lista, marcado com um
+                ponto.
               </p>
             </div>
           </div>
@@ -93,6 +105,7 @@ export default function Conversations() {
               nome={atual?.nome ?? null}
               ultimoServico={atual?.ultimoServico ?? null}
               janela={janela}
+              onVoltar={() => setSelecionado(null)}
             />
             <MessageTimeline
               phone={selecionado}
@@ -103,7 +116,7 @@ export default function Conversations() {
             />
             {/* Sem histórico carregado não há como saber se a janela está
                 aberta: `getWindowStatus([])` devolve "fechada", e mostrar o
-                aviso de janela fechada durante a carga seria mentira. */}
+                aviso de janela fechada durante a carga seria falso. */}
             {!mensagens.isLoading && !mensagens.isError && (
               <MessageComposer
                 phone={selecionado}

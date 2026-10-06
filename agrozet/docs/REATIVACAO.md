@@ -3,7 +3,7 @@
 **Para quem abre este projeto numa sessão nova.** Leia isto primeiro; ele diz
 onde o projeto parou, o que é real, o que é maquete, e qual é o próximo passo.
 
-**Última atualização:** 2026-10-05
+**Última atualização:** 2026-10-06
 
 ---
 
@@ -37,7 +37,7 @@ peça que o Agrozet cortou (multi-instância) estava tecida em 40 arquivos.
 
 ## 2. Estado atual, sem maquiagem
 
-**Fase 1 implementada e verificada: 129 testes, `tsc`/`lint`/`build` limpos.**
+**Fase 1 implementada e verificada: 146 testes, `tsc`/`lint`/`build` limpos.**
 
 Mas: **o sistema nunca rodou contra um Supabase real.** Não existe projeto, a
 migration nunca foi aplicada, não existe app na Meta, nenhum número foi aprovado,
@@ -76,24 +76,35 @@ npm run dev     # http://localhost:3000 -> entra direto no CRM
 - **A flag não olha `NODE_ENV`**, de propósito: preview da Vercel roda como
   produção, e amarrar o modo demonstração ao ambiente abriria o CRM num preview.
 - Os dados vivem em `src/lib/mock/store.ts` (memória, zero I/O), semeados de
-  `src/lib/demo/dados.ts` — 6 conversas realistas de petshop.
-- Uma faixa no topo deixa explícito que é demonstração.
+  `src/lib/mock/dados.ts` — 6 conversas realistas de petshop.
+- **Não há nenhum aviso na tela de que é demonstração**, por decisão do dono: ele
+  apresenta pessoalmente e explica. Consequência a ter em mente: `/disparos` e
+  `/erros` mostram dados fictícios sem nada indicando isso, e `/disparos` não tem
+  backend nenhum por trás. Ninguém deve usar essas duas telas sozinho achando que
+  são reais.
 
 **Ao desligar o modo mock**, confira: `NEXT_PUBLIC_MOCK` fora do ambiente, login
 voltando a pedir senha, e `/clientes`, `/disparos`, `/bot`, `/erros` voltando a
 aparecer desabilitados na Sidebar (são maquete, não existem no backend).
 
-### `/demo` — a vitrine
+### Sistema de design
 
-Existe também `/demo` e `/demo/crm`: uma página de apresentação com um
-**simulador de WhatsApp** que roda a lógica real do bot no browser (`bot.ts` é
-pura, então `decidirBot` executa client-side sem infraestrutura). É pública por
-construção, isolada do CRM real.
+A UI é **shadcn em OKLCH**, espelhando `../mar-azul-system-main/src/app/globals.css`:
+conjunto semântico completo, cinzas neutros, e a cor da marca só em `--primary`,
+`--ring` e no item ativo da sidebar. Fontes grotescas (Hanken Grotesk, Archivo,
+Geist Mono) — nada de serifada, nada de textura.
 
-Foi construída antes da mudança de rumo para "o CRM em si como mockup". **Pode
-ser apagada sem efeito colateral** (`src/app/demo/`, `src/components/demo/`,
-`src/lib/demo/simulador*`), desde que `src/lib/demo/dados.ts` fique — o store do
-modo mock é semeado dele.
+Uma versão anterior tinha fundo creme, Fraunces serifada e textura de papel; foi
+recusada por parecer landing page em vez de ferramenta de trabalho. **Não
+reintroduza decoração**: a atendente olha esta tela oito horas por dia.
+
+O laranja vivo da marca (`oklch(0.672 0.196 40.9)`) tem **3,22:1 com branco e
+reprova AA**. Por isso `--primary` é o laranja escurecido (`#c2410c`, 5,19:1 com
+branco) e o laranja vivo só aparece no item ativo da sidebar, sobre fundo escuro.
+Os 21 pares de contraste foram calculados, claro e escuro.
+
+O bloco `.dark` está completo mas **inerte**: `next-themes` não está instalado.
+Falta só um provider que ponha `.dark` no `<html>`.
 
 ---
 
@@ -168,10 +179,10 @@ cobrado em toda entrega.
 
 | Onde | O quê |
 |---|---|
-| `/demo` (simulador) | Tocar um reply button **rola a página** para fora da seção. Reproduzido, causa não diagnosticada (o `scrollTo` do container está correto; não é `scrollIntoView`). Só afeta a vitrine. |
 | `MessageBubble` | Vídeo recebido renderiza **balão vazio** — `TIPOS_DE_MIDIA` inclui `video`, mas a cadeia de render não tem ramo para ele. |
 | `MessageComposer` × `/api/upload-media` | O composer aceita qualquer `image/*`; a rota só aceita `jpeg/png/webp`. Foto `image/heic` do iPhone é aceita na tela e recusada na rota. |
 | Trigger `sync_cliente_from_message` | `primeiro_contato_at` fica **NULL para sempre** em cliente criado à mão que depois manda mensagem (o `DO UPDATE` não toca a coluna). Inócuo hoje; corrigir junto com a Fase 2. |
+| Timestamps e SSR | **Corrigido**, mas saiba por que: `ConversationList`, `MessageBubble` e `MessageTimeline` formatam hora com `toLocaleTimeString`/`new Date()`, e o servidor renderiza num fuso e instante diferentes do browser (Node em UTC contra America/Sao_Paulo dá **3 h de diferença permanente**). Resolvido com `suppressHydrationWarning` nos nós de horário, cada um com comentário `HIDRATAÇÃO:`. **Não remova o atributo** "limpando" o código. |
 | Código morto | `janela24h.ts` (`reativacaoJaEnviada`, `nuncaRespondeu`), `phoneUtils.ts` (`telNorm11`), `waIdentity.ts` (ramo BSUID) referenciam um sistema que não é este. Maior fonte de confusão para quem ler esses arquivos. |
 
 ---
@@ -204,7 +215,7 @@ Cada uma foi paga com um incidente, aqui ou no sistema de referência. O
 ```bash
 cd agrozet
 npm install
-npm run test     # 129 testes
+npm run test     # 146 testes
 npm run build
 npm run dev      # com NEXT_PUBLIC_MOCK=1 no .env.local: entra direto no CRM
 ```

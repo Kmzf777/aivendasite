@@ -1,16 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import {
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  List,
-  MousePointerClick,
-  Plus,
-  Trash2,
-} from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { ChevronDown, ChevronUp, List, MousePointerClick, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,9 +20,9 @@ import { lerConfigBot, lerOpcoesBotCompletas } from '@/lib/mock/store'
 import { cn } from '@/lib/utils'
 
 /**
- * `/bot` — edição do menu do robô (Fase 2 do spec), admin.
+ * `/bot` — edição do menu do robô, admin.
  *
- * O QUE É REAL AQUI: a validação. `validarConfig`, `validarOpcao` e `montarMenu`
+ * A VALIDAÇÃO É A DE PRODUÇÃO. `validarConfig`, `validarOpcao` e `montarMenu`
  * são os MESMOS módulos puros que o webhook executa no caminho crítico, com os
  * mesmos limites da Meta (título ≤ 20, corpo ≤ 1024, rodapé ≤ 60) e o mesmo
  * degrau de formato (1–3 opções ativas viram reply buttons; 4–10 viram lista).
@@ -41,11 +32,7 @@ import { cn } from '@/lib/utils'
  * Esse degrau é a razão de a tela existir. A Meta RECUSA a mensagem com 4 reply
  * buttons — não devolve aviso amigável, devolve mensagem não entregue e um
  * cliente sem resposta. Com o menu editável, alguém cadastra a 4ª opção e o
- * formato tem de mudar sozinho. Aqui dá para ver isso acontecer antes de custar
- * um atendimento.
- *
- * O QUE NÃO É REAL: a gravação. O estado vive neste componente e se desfaz ao
- * recarregar a página — dito na tela, não só aqui.
+ * formato tem de mudar sozinho.
  */
 
 /** Opção como esta tela a edita: a do store + a `resposta`, que ela edita. */
@@ -136,49 +123,57 @@ export default function BotAdmin() {
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
-        <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="font-display text-2xl">Bot</h1>
-          <p className="text-sm text-muted-foreground">
-            O menu que o cliente recebe na primeira mensagem
-          </p>
+    <div className="scroll-soft h-full overflow-y-auto">
+      <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
+        <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-border pb-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+              Configuração
+            </p>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">Bot</h1>
+          </div>
+          <div className="flex items-center gap-5">
+            <div className="text-right">
+              <p className="font-mono text-xl font-semibold tabular-nums">{ativas}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {ativas === 1 ? 'opção ativa' : 'opções ativas'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p
+                className={cn(
+                  'font-mono text-xl font-semibold tabular-nums',
+                  totalErros > 0 && 'text-destructive'
+                )}
+              >
+                {totalErros}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {totalErros === 1 ? 'problema' : 'problemas'}
+              </p>
+            </div>
+          </div>
         </header>
 
-        <Alert className="mt-4 ring-1 ring-amarelo/50">
-          <AlertTriangle aria-hidden className="text-laranja-escuro" />
-          <AlertTitle>A validação é real. A gravação ainda não.</AlertTitle>
-          <AlertDescription>
-            <p>
-              Os limites conferidos aqui são os mesmos que a Meta aplica no envio
-              — título de botão até {LIMITE_TITULO_BOTAO} caracteres, texto até{' '}
-              {LIMITE_CORPO}, rodapé até {LIMITE_RODAPE} — e o preview ao lado usa
-              exatamente o código que monta a mensagem de verdade. O que ainda
-              não existe é <strong>salvar</strong>: as mudanças valem só nesta
-              janela e se desfazem ao recarregar a página.
-            </p>
-          </AlertDescription>
-        </Alert>
-
-        <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
           {/* Preview — primeiro no celular, coluna direita no desktop. */}
           <div className="xl:order-2">
             <Preview menu={menu} erroMenu={erroMenu} ativas={ativas} fecho={config.fecho} />
           </div>
 
-          <div className="min-w-0 space-y-5 xl:order-1">
+          <div className="min-w-0 space-y-4 xl:order-1">
             {/* ── Configuração geral ── */}
             <Card>
               <CardHeader className="border-b">
-                <CardTitle className="font-display text-lg">Textos do menu</CardTitle>
+                <CardTitle>Textos do menu</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <label className="flex items-center gap-2.5">
+                <label className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
                   <input
                     type="checkbox"
                     checked={config.ativo}
                     onChange={(e) => setConfig((c) => ({ ...c, ativo: e.target.checked }))}
-                    className="size-4 accent-[var(--brand-laranja)]"
+                    className="size-4 accent-[var(--primary)]"
                   />
                   <span className="text-sm font-medium">Bot ligado</span>
                   <span className="text-xs text-muted-foreground">
@@ -202,8 +197,8 @@ export default function BotAdmin() {
 
                 <div>
                   <div className="flex items-baseline justify-between gap-2">
-                    <label htmlFor="bot-rodape" className="text-xs font-medium">
-                      Rodapé <span className="text-muted-foreground">(opcional)</span>
+                    <label htmlFor="bot-rodape" className={CLASSE_ROTULO}>
+                      Rodapé <span className="normal-case">(opcional)</span>
                     </label>
                     <Contador atual={(config.rodape ?? '').length} limite={LIMITE_RODAPE} />
                   </div>
@@ -219,7 +214,7 @@ export default function BotAdmin() {
                       }))
                     }
                     aria-invalid={(config.rodape ?? '').length > LIMITE_RODAPE}
-                    className="mt-1"
+                    className="mt-1.5"
                   />
                 </div>
 
@@ -241,9 +236,9 @@ export default function BotAdmin() {
             <Card>
               <CardHeader className="border-b">
                 <CardTitle className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="font-display text-lg">Opções do menu</span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    {ativas} {ativas === 1 ? 'ativa' : 'ativas'} de {opcoes.length}
+                  <span>Opções do menu</span>
+                  <span className="font-mono text-xs font-normal tabular-nums text-muted-foreground">
+                    {ativas}/{opcoes.length} ativas
                   </span>
                 </CardTitle>
               </CardHeader>
@@ -252,20 +247,20 @@ export default function BotAdmin() {
                   <div
                     key={`${o.botao_id}-${i}`}
                     className={cn(
-                      'rounded-xl border border-border p-3',
-                      !o.ativo && 'bg-muted/40 opacity-70'
+                      'rounded-lg border border-border p-3',
+                      !o.ativo && 'bg-muted/40'
                     )}
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                      <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-muted-foreground">
                         {o.ordem}
                       </span>
-                      <label className="flex items-center gap-1.5 text-xs">
+                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <input
                           type="checkbox"
                           checked={o.ativo}
                           onChange={(e) => alterarOpcao(i, 'ativo', e.target.checked)}
-                          className="size-3.5 accent-[var(--brand-laranja)]"
+                          className="size-3.5 accent-[var(--primary)]"
                         />
                         ativa
                       </label>
@@ -298,9 +293,9 @@ export default function BotAdmin() {
                       </Button>
                     </div>
 
-                    <div className="mt-2.5">
+                    <div className="mt-3">
                       <div className="flex items-baseline justify-between gap-2">
-                        <label htmlFor={`op-titulo-${i}`} className="text-xs font-medium">
+                        <label htmlFor={`op-titulo-${i}`} className={CLASSE_ROTULO}>
                           Título do botão
                         </label>
                         <Contador atual={o.titulo.length} limite={LIMITE_TITULO_BOTAO} />
@@ -321,14 +316,14 @@ export default function BotAdmin() {
                         }}
                         aria-invalid={o.titulo.length > LIMITE_TITULO_BOTAO}
                         placeholder="Ex.: Banho e tosa"
-                        className="mt-1"
+                        className="mt-1.5"
                       />
                       <p className="mt-1 font-mono text-[11px] text-muted-foreground">
                         id: {o.botao_id}
                       </p>
                     </div>
 
-                    <div className="mt-2.5">
+                    <div className="mt-3">
                       <CampoTexto
                         id={`op-resposta-${i}`}
                         rotulo="Resposta"
@@ -348,25 +343,27 @@ export default function BotAdmin() {
                   Nova opção
                 </Button>
 
-                {/* O degrau, dito antes de ser descoberto na prática. */}
-                <p className="rounded-lg border border-dashed border-border bg-muted/60 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                  Até {MAX_REPLY_BUTTONS} opções ativas o WhatsApp mostra botões
-                  lado a lado. Da {MAX_REPLY_BUTTONS + 1}ª em diante ele obriga o
-                  formato de lista — a Meta recusa a mensagem com{' '}
-                  {MAX_REPLY_BUTTONS + 1} botões, e recusada significa cliente sem
-                  resposta. Acima de {MAX_ITENS_LISTA} ativas, só as{' '}
-                  {MAX_ITENS_LISTA} primeiras são enviadas.
+                {/* O degrau de formato, dito antes de ser descoberto na prática. */}
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Até {MAX_REPLY_BUTTONS} opções ativas o WhatsApp mostra botões lado a
+                  lado; da {MAX_REPLY_BUTTONS + 1}ª em diante ele obriga o formato de
+                  lista. Acima de {MAX_ITENS_LISTA} ativas, só as {MAX_ITENS_LISTA}{' '}
+                  primeiras são enviadas.
                 </p>
               </CardContent>
             </Card>
 
             <div className="flex flex-wrap items-center gap-3">
               <Button disabled={totalErros > 0}>Salvar</Button>
-              <p className="text-xs text-muted-foreground">
-                {totalErros > 0
-                  ? `${totalErros} ${totalErros === 1 ? 'problema impede' : 'problemas impedem'} o salvamento.`
-                  : 'Nesta versão, salvar vale só até recarregar a página.'}
-              </p>
+              {totalErros > 0 && (
+                <p className="text-xs text-destructive">
+                  {totalErros}{' '}
+                  {totalErros === 1
+                    ? 'problema impede o salvamento'
+                    : 'problemas impedem o salvamento'}
+                  .
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -377,12 +374,16 @@ export default function BotAdmin() {
 
 // ── peças ──────────────────────────────────────────────────────────────────
 
+/** Rótulo de campo: miúdo, caixa alta, em `muted` — o padrão das quatro telas. */
+const CLASSE_ROTULO =
+  'text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase'
+
 function Contador({ atual, limite }: { atual: number; limite: number }) {
   const estourou = atual > limite
   return (
     <span
       className={cn(
-        'font-mono text-[11px]',
+        'font-mono text-[11px] tabular-nums',
         estourou ? 'font-semibold text-destructive' : 'text-muted-foreground'
       )}
     >
@@ -426,7 +427,7 @@ function CampoTexto({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2">
-        <label htmlFor={id} className="text-xs font-medium">
+        <label htmlFor={id} className={CLASSE_ROTULO}>
           {rotulo}
         </label>
         <Contador atual={valor.length} limite={limite} />
@@ -438,10 +439,10 @@ function CampoTexto({
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={valor.length > limite}
         className={cn(
-          'mt-1 w-full resize-y rounded-lg border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50',
+          'mt-1.5 w-full resize-y rounded-lg border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50',
           valor.length > limite
             ? 'border-destructive ring-2 ring-destructive/20'
-            : 'border-border focus-visible:border-ring'
+            : 'border-input focus-visible:border-ring'
         )}
       />
       {descricao && <p className="mt-1 text-[11px] text-muted-foreground">{descricao}</p>}
@@ -465,12 +466,12 @@ type PreviewProps = {
  */
 function Preview({ menu, erroMenu, ativas, fecho }: PreviewProps) {
   return (
-    <Card className="xl:sticky xl:top-5">
+    <Card className="xl:sticky xl:top-6">
       <CardHeader className="border-b">
         <CardTitle className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-display text-lg">Como o cliente vê</span>
+          <span>Como o cliente vê</span>
           {menu && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-amarelo/60 bg-amarelo/25 px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
               {menu.formato === 'button' ? (
                 <>
                   <MousePointerClick aria-hidden className="size-3" /> botões
@@ -499,16 +500,13 @@ function Preview({ menu, erroMenu, ativas, fecho }: PreviewProps) {
         )}
 
         {menu === null ? (
-          <p className="rounded-lg border border-dashed border-border bg-muted/60 px-3 py-6 text-center text-xs text-muted-foreground">
-            Sem opção ativa o bot não tem o que enviar — ele fica calado e o
-            atendimento começa direto com uma pessoa.
+          <p className="rounded-lg border border-border bg-muted px-3 py-6 text-center text-xs text-muted-foreground">
+            Sem opção ativa o bot fica calado e o atendimento começa direto com uma
+            pessoa.
           </p>
         ) : (
-          <div className="chat-wallpaper rounded-xl p-3">
-            <div
-              className="max-w-[18rem] rounded-xl px-3 py-2 shadow-sm"
-              style={{ background: 'var(--chat-bubble-out)' }}
-            >
+          <div className="rounded-lg bg-muted p-3">
+            <div className="max-w-[18rem] rounded-lg border border-border bg-card px-3 py-2">
               <p className="text-sm whitespace-pre-wrap">{menu.corpo}</p>
               {menu.rodape && (
                 <p className="mt-1.5 text-[11px] text-muted-foreground">{menu.rodape}</p>
@@ -519,7 +517,7 @@ function Preview({ menu, erroMenu, ativas, fecho }: PreviewProps) {
                   {menu.botoes.map((b) => (
                     <div
                       key={b.id}
-                      className="rounded-lg border border-border bg-card px-2 py-1.5 text-center text-xs font-medium text-laranja-escuro"
+                      className="rounded-md border border-border bg-background px-2 py-1.5 text-center text-xs font-medium"
                     >
                       {b.titulo}
                     </div>
@@ -527,10 +525,10 @@ function Preview({ menu, erroMenu, ativas, fecho }: PreviewProps) {
                 </div>
               ) : (
                 <>
-                  <div className="mt-2 rounded-lg border border-border bg-card px-2 py-1.5 text-center text-xs font-medium text-laranja-escuro">
+                  <div className="mt-2 rounded-md border border-border bg-background px-2 py-1.5 text-center text-xs font-medium">
                     ☰ {menu.rotulo}
                   </div>
-                  <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-card">
+                  <ul className="mt-2 divide-y divide-border rounded-md border border-border bg-background">
                     {menu.itens.map((it) => (
                       <li key={it.id} className="px-2 py-1.5 text-xs">
                         {it.titulo}
@@ -538,8 +536,8 @@ function Preview({ menu, erroMenu, ativas, fecho }: PreviewProps) {
                     ))}
                   </ul>
                   <p className="mt-1 text-[10px] text-muted-foreground">
-                    No celular esta parte abre numa folha, depois de tocar no
-                    botão acima.
+                    No celular esta parte abre numa folha, depois de tocar no botão
+                    acima.
                   </p>
                 </>
               )}
@@ -549,10 +547,7 @@ function Preview({ menu, erroMenu, ativas, fecho }: PreviewProps) {
                 da opção escolhida. Mostrar só o menu esconderia metade do que o
                 cliente recebe. */}
             {fecho.trim() !== '' && (
-              <div
-                className="mt-2 max-w-[18rem] rounded-xl px-3 py-2 shadow-sm"
-                style={{ background: 'var(--chat-bubble-out)' }}
-              >
+              <div className="mt-2 max-w-[18rem] rounded-lg border border-border bg-card px-3 py-2">
                 <p className="text-[11px] text-muted-foreground">
                   depois da escolha, junto com a resposta:
                 </p>

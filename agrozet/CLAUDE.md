@@ -36,7 +36,7 @@ npm run lint     # ESLint
 npm run test     # vitest run
 ```
 
-Última execução verificada (2026-10-05): `npm run test` → **164 testes, 12
+Última execução verificada (2026-10-06): `npm run test` → **146 testes, 11
 arquivos, todos passando**; `npx tsc --noEmit`, `npm run lint` e `npm run build`
 limpos.
 

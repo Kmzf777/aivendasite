@@ -58,11 +58,12 @@ export default function MessageComposer({ phone, janela, onEnviado }: Props) {
     const corpo = texto.trim()
     if (!corpo) return
 
-    // MODO MOCK: escreve no store em memória em vez de chamar
-    // `/api/send-message` — a rota exige sessão e Supabase, que no mockup não
-    // existem, e devolveria 401. O tratamento de sucesso é o MESMO do caminho
-    // real (limpa a caixa e avisa o pai), para a tela se comportar igual.
-    // Com a flag desligada nada disto roda e o `fetch` abaixo é o de antes.
+    // MODO_MOCK: escreve no store em memória em vez de chamar
+    // `/api/send-message` — a rota exige sessão e Supabase, que com a flag
+    // ligada não existem, e devolveria 401. O tratamento de sucesso é o MESMO do
+    // caminho real (limpa a caixa e avisa o pai), para a tela se comportar
+    // igual. Com a flag desligada nada disto roda e o `fetch` abaixo é o de
+    // antes.
     if (MODO_MOCK) {
       enviarTexto(phone, corpo)
       setTexto('')
@@ -116,11 +117,11 @@ export default function MessageComposer({ phone, janela, onEnviado }: Props) {
 
   if (travado) {
     return (
-      <div className="shrink-0 border-t border-border bg-card px-5 py-4">
-        <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted px-3 py-2.5">
-          <Lock aria-hidden className="mt-0.5 size-4 shrink-0 text-laranja-escuro" />
+      <div className="shrink-0 border-t border-border bg-card px-4 py-3">
+        <div className="flex items-start gap-2.5 rounded-md border border-border bg-muted px-3 py-2">
+          <Lock aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
           <div className="text-xs">
-            <p className="font-semibold">Janela de 24 h fechada</p>
+            <p className="font-medium">Janela de 24 h fechada</p>
             <p className="mt-0.5 text-muted-foreground">
               A Meta só aceita mensagem de template fora da janela — um texto livre sairia
               daqui e falharia sem aviso. Espere o cliente escrever, ou use um disparo
@@ -135,10 +136,10 @@ export default function MessageComposer({ phone, janela, onEnviado }: Props) {
   const podeEnviar = !enviando && (!!arquivo || texto.trim().length > 0)
 
   return (
-    <div className="shrink-0 border-t border-border bg-card px-5 py-3">
+    <div className="shrink-0 border-t border-border bg-card px-4 py-3">
       {arquivo && (
-        <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-muted px-2.5 py-1.5 text-xs">
-          <ImagePlus aria-hidden className="size-3.5 shrink-0 text-laranja-escuro" />
+        <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-muted px-2.5 py-1.5 text-xs">
+          <ImagePlus aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="min-w-0 flex-1 truncate">{arquivo.name}</span>
           <span className="shrink-0 text-muted-foreground">vai sem legenda</span>
           <button
@@ -148,9 +149,9 @@ export default function MessageComposer({ phone, janela, onEnviado }: Props) {
               setArquivo(null)
               if (inputArquivoRef.current) inputArquivoRef.current.value = ''
             }}
-            className="rounded p-0.5 hover:bg-background"
+            className="rounded p-0.5 hover:bg-background focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
           >
-            <X className="size-3.5" />
+            <X aria-hidden className="size-3.5" />
           </button>
         </div>
       )}
@@ -163,21 +164,17 @@ export default function MessageComposer({ phone, janela, onEnviado }: Props) {
           className="hidden"
           onChange={escolherArquivo}
         />
+        {/* MODO_MOCK: não há upload no caminho em memória (`enviarTexto` é o que
+            existe), então o anexo fica VISÍVEL e desabilitado em vez de
+            escondido — o CRM manda foto, e esconder o botão daria a entender que
+            não manda. Sem `title`: um ícone apagado já diz que não está
+            disponível, e explicar por quê é ruído na barra de digitação. */}
         <Button
           type="button"
           variant="ghost"
           size="icon-lg"
           aria-label="Anexar imagem"
-          // No mockup o botão fica VISÍVEL e desabilitado, não escondido: a
-          // dona do petshop precisa ver que o CRM manda foto, e o `title`
-          // explica por que não dá para experimentar agora. Esconder faria a
-          // demonstração parecer um produto sem anexo.
           disabled={enviando || MODO_MOCK}
-          title={
-            MODO_MOCK
-              ? 'Anexar imagem não funciona na demonstração: nenhum arquivo é enviado ou armazenado.'
-              : undefined
-          }
           onClick={() => inputArquivoRef.current?.click()}
         >
           <ImagePlus />
@@ -192,7 +189,7 @@ export default function MessageComposer({ phone, janela, onEnviado }: Props) {
           placeholder="Escreva uma mensagem…"
           aria-label="Mensagem"
           className={cn(
-            'max-h-32 min-h-9 flex-1 resize-none rounded-lg border border-border bg-transparent px-3 py-2 text-sm',
+            'max-h-32 min-h-9 flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm',
             'placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
           )}
         />
@@ -208,7 +205,12 @@ export default function MessageComposer({ phone, janela, onEnviado }: Props) {
         </Button>
       </div>
       <p className="mt-1.5 text-[11px] text-muted-foreground">
-        Enter envia · Shift+Enter quebra linha · janela aberta por {janela.timeLeft}
+        Enter envia · Shift+Enter quebra linha · janela aberta por{' '}
+        {/* `timeLeft` vem do relógio do navegador — mesma divergência de
+            hidratação da coluna de horário da lista, mesmo remédio. */}
+        <span suppressHydrationWarning className="tabular-nums">
+          {janela.timeLeft}
+        </span>
       </p>
     </div>
   )

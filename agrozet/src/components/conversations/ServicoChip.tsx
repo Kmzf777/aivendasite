@@ -34,13 +34,13 @@ const UMA_HORA = 60 * 60 * 1000
 
 /**
  * O tipo de retorno fixado em uma chave — `data` é tudo que os dois
- * consumidores (`ServicoChip` e `MessageBubble`) leem. Declarado porque o modo
- * mock não devolve um `UseQueryResult` inteiro.
+ * consumidores (`ServicoChip` e `MessageBubble`) leem. Declarado porque o
+ * caminho em memória não devolve um `UseQueryResult` inteiro.
  */
 export type ResultadoBotOpcoes = { data: OpcaoBot[] | undefined }
 
 export function useBotOpcoes(): ResultadoBotOpcoes {
-  // MODO MOCK: o menu vem do store, sem rede. Mesma mecânica de `useConversas`
+  // MODO_MOCK: o menu vem do store, sem rede. Mesma mecânica de `useConversas`
   // (snapshot = `versao()`, número estável; os dados são derivados dele), e
   // `enabled: false` mantém o `queryFn` parado. Com a flag desligada isto é o
   // `useQuery` de antes, com o mesmo `staleTime` de 1 h.
@@ -83,6 +83,11 @@ type Props = {
  * Não usa `components/ui/badge.tsx`: aquele é um pill de CONTADOR (devolve
  * `null` sem `count`), serve ao indicador de pendente e não tem variante.
  *
+ * Neutro de propósito: a cor da marca está reservada ao item ativo da sidebar,
+ * ao botão primário e ao ponto de pendente. Um chip colorido por conversa
+ * repintaria a lista inteira e seria a primeira coisa a chamar atenção numa
+ * tela onde o importante é quem está esperando.
+ *
  * Fallback deliberado: `botao_id` sem correspondência em `bot_opcoes` — opção
  * renomeada, desativada e removida, ou o mapa ainda carregando — mostra o
  * próprio `botao_id`. Esconder o chip apagaria a informação de que a conversa
@@ -97,9 +102,7 @@ export default function ServicoChip({ botaoId, className }: Props) {
   return (
     <span
       className={cn(
-        // Amarelo da marca é só preenchimento e nunca recebe texto claro: o
-        // texto aqui é a tinta marrom-escura do tema.
-        'inline-flex max-w-full items-center truncate rounded-full border border-amarelo/60 bg-amarelo/25 px-2 py-0.5 text-[11px] leading-4 font-medium text-secondary-foreground',
+        'inline-flex max-w-full shrink-0 items-center truncate rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] leading-4 font-medium text-muted-foreground',
         className
       )}
       title={titulo}

@@ -1,22 +1,31 @@
 import type { Metadata } from 'next'
-import { Fraunces, Karla } from 'next/font/google'
+import { Archivo, Hanken_Grotesk, Geist_Mono } from 'next/font/google'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import Providers from './providers'
 import './globals.css'
 
-// Display — serifada macia, com os eixos SOFT/WONK que dão o tom de bairro
-// (mesma escolha do site-agrozet, para o CRM e a landing falarem igual).
-const fraunces = Fraunces({
-  variable: '--font-fraunces',
+// Display — grotesca neutra para títulos. Nada de serifada: a landing do
+// petshop pode ter personalidade, o CRM é ferramenta de trabalho.
+const archivo = Archivo({
+  variable: '--font-archivo',
   subsets: ['latin'],
-  axes: ['SOFT', 'WONK', 'opsz'],
+  weight: ['500', '600', '700'],
 })
 
-// Corpo / UI — grotesca legível, sem o Inter/Poppins de todo pet shop.
-const karla = Karla({
-  variable: '--font-karla',
+// Corpo / UI — humanista-grotesca, legível em lista densa e em tamanho pequeno.
+const hanken = Hanken_Grotesk({
+  variable: '--font-hanken',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+})
+
+// Dados / Mono — hora e telefone em coluna. Dígitos tabulares (globals.css)
+// para o número não "dançar" de linha em linha.
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+  weight: ['400', '500'],
 })
 
 export const metadata: Metadata = {
@@ -30,7 +39,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${fraunces.variable} ${karla.variable} h-full`}
+      className={`${archivo.variable} ${hanken.variable} ${geistMono.variable} h-full`}
     >
       <body className="h-full font-sans antialiased" suppressHydrationWarning>
         <Providers>

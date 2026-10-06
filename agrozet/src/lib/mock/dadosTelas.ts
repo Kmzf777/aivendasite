@@ -56,7 +56,7 @@ export type DisparoMock = {
 }
 
 /** Rótulo legível de uma campanha, para o botão "cancelar campanha". */
-export const CAMPANHAS_EXEMPLO: Record<string, string> = {
+export const CAMPANHAS: Record<string, string> = {
   'lembrete-banho-out': 'Lembrete de banho',
   'promo-racao-out': 'Promoção de ração',
 }
@@ -67,7 +67,7 @@ export const CAMPANHAS_EXEMPLO: Record<string, string> = {
  * Inclui um `failed` e um `canceled` de propósito — uma fila só com `sent`
  * esconderia justamente as colunas que a tela existe para mostrar.
  */
-export function disparosExemplo(): DisparoMock[] {
+export function disparosIniciais(): DisparoMock[] {
   return [
     {
       id: 'd1',
@@ -201,7 +201,7 @@ export type ErroMock = {
  * `upload-media.*`, `mediaStorage.*`). Inventar origem aqui tornaria o filtro
  * da tela uma mentira: o dono filtraria por algo que nunca vai aparecer.
  */
-export function errosExemplo(): ErroMock[] {
+export function errosIniciais(): ErroMock[] {
   return [
     {
       id: 'e1',

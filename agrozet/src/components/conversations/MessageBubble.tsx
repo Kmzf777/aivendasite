@@ -12,9 +12,19 @@ type Props = {
 
 const TIPOS_DE_MIDIA = new Set(['image', 'audio', 'document', 'video'])
 
+// HIDRATAÇÃO: `toLocaleTimeString` formata no fuso do runtime, e o fuso do Node
+// não é o do browser — o mesmo ISO sai "14:32" no servidor e "11:32" no
+// cliente. O `<span>` do horário carrega `suppressHydrationWarning` por isso.
 function hora(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
+
+// Botão de carregar mídia sob demanda. Neutro (borda + fundo do tema) e nunca
+// com a cor da marca: ela está reservada ao botão primário, ao item ativo da
+// sidebar e ao ponto de pendente — e como texto, sobre a superfície clara do
+// balão, o laranja não alcançaria 4,5:1.
+const botaoMidia =
+  'inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
 
 /**
  * Imagem do balão.
@@ -72,7 +82,7 @@ function ImagemDoBalao({ path, alt }: { path: string; alt: string }) {
     <div ref={ref} className="min-h-[120px]">
       {erro ? (
         <p className="flex items-center gap-1.5 py-6 text-xs text-muted-foreground">
-          <ImageOff className="size-3.5" /> Não foi possível carregar a imagem
+          <ImageOff aria-hidden className="size-3.5" /> Não foi possível carregar a imagem
         </p>
       ) : url ? (
         // `<img>` e não `next/image`: a URL é assinada e efêmera (expira), o que
@@ -83,10 +93,10 @@ function ImagemDoBalao({ path, alt }: { path: string; alt: string }) {
         <img
           src={url}
           alt={alt}
-          className="max-h-80 w-auto max-w-full rounded-lg object-contain"
+          className="max-h-80 w-auto max-w-full rounded-md object-contain"
         />
       ) : (
-        <div className="h-[120px] w-[180px] animate-pulse rounded-lg bg-foreground/5" />
+        <div className="h-[120px] w-[180px] animate-pulse rounded-md bg-foreground/5" />
       )}
     </div>
   )
@@ -102,6 +112,9 @@ function ImagemDoBalao({ path, alt }: { path: string; alt: string }) {
  * "escolha uma opção" sem opção nenhuma, e a resposta seguinte do cliente
  * ("Rações") ficaria sem contexto.
  *
+ * São `<span aria-disabled>` e não `<button>` de propósito: ninguém aqui aperta
+ * o botão do cliente. É o registro do que foi enviado, não um controle.
+ *
  * Limite assumido: os chips refletem `bot_opcoes` AGORA, não como estava no
  * envio. Se o dono do pet shop editar o menu, menus antigos passam a exibir os
  * botões novos. Guardar o snapshot exigiria coluna nova em `messages` — fora do
@@ -113,12 +126,12 @@ function ChipsDoMenu() {
   if (ativas.length === 0) return null
 
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5 border-t border-foreground/10 pt-2">
+    <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2">
       {ativas.map((o) => (
         <span
           key={o.botao_id}
           aria-disabled="true"
-          className="cursor-not-allowed rounded-md border border-foreground/15 bg-background/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+          className="rounded border border-border bg-background px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground"
         >
           {o.titulo}
         </span>
@@ -128,12 +141,19 @@ function ChipsDoMenu() {
 }
 
 function StatusDeEntrega({ status }: { status: string | null }) {
-  if (status === 'read') return <CheckCheck className="size-3.5 text-[var(--chat-check)]" />
-  if (status === 'delivered') return <CheckCheck className="size-3.5 opacity-60" />
-  if (status === 'sent') return <Check className="size-3.5 opacity-60" />
-  if (status === 'failed')
-    return <TriangleAlert className="size-3.5 text-destructive" aria-label="Falhou" />
-  return <Clock className="size-3.5 opacity-50" />
+  if (status === 'read') {
+    return <CheckCheck aria-label="Lida" className="size-3.5 text-[var(--chat-check)]" />
+  }
+  if (status === 'delivered') {
+    return <CheckCheck aria-label="Entregue" className="size-3.5 text-foreground/55" />
+  }
+  if (status === 'sent') {
+    return <Check aria-label="Enviada" className="size-3.5 text-foreground/55" />
+  }
+  if (status === 'failed') {
+    return <TriangleAlert aria-label="Falhou" className="size-3.5 text-destructive" />
+  }
+  return <Clock aria-label="Pendente" className="size-3.5 text-foreground/45" />
 }
 
 export default function MessageBubble({ msg }: Props) {
@@ -147,17 +167,18 @@ export default function MessageBubble({ msg }: Props) {
     <div className={cn('flex w-full', saindo ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[75%] min-w-0 rounded-2xl px-3 py-2 text-sm shadow-sm',
-          saindo ? 'rounded-br-md' : 'rounded-bl-md border border-border'
+          // Raio médio e sem sombra: a diferença de fundo e o lado já dizem quem
+          // falou. Balão muito arredondado com sombra é o que dava à tela a cara
+          // de aplicativo de conversa pessoal, não de ferramenta de trabalho.
+          'max-w-[85%] min-w-0 rounded-lg border border-border px-2.5 py-1.5 text-sm md:max-w-[75%]',
+          saindo
+            ? 'bg-[var(--chat-bubble-out)]'
+            : 'bg-[var(--chat-bubble-in)]'
         )}
-        style={{
-          background: saindo ? 'var(--chat-bubble-out)' : 'var(--chat-bubble-in)',
-          color: 'var(--foreground)',
-        }}
       >
         {midiaExpirada ? (
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground italic">
-            <ImageOff className="size-3.5 shrink-0" />
+            <ImageOff aria-hidden className="size-3.5 shrink-0" />
             mídia expirada
           </p>
         ) : msg.message_type === 'image' && msg.media_path ? (
@@ -187,8 +208,15 @@ export default function MessageBubble({ msg }: Props) {
             gravada já como o título do botão. */}
         {saindo && msg.message_type === 'interactive' && <ChipsDoMenu />}
 
-        <div className="mt-1 flex items-center justify-end gap-1">
-          <span className="font-mono text-[10px] text-muted-foreground">
+        <div className="mt-0.5 flex items-center justify-end gap-1">
+          {/* `text-foreground/70` e não `text-muted-foreground`: o fundo aqui é
+              o do balão, não o `--background` para o qual o token foi calibrado.
+              Derivar do `foreground` do próprio balão mantém o contraste nos
+              dois lados da conversa. Ver a nota de HIDRATAÇÃO em `hora`. */}
+          <span
+            suppressHydrationWarning
+            className="font-mono text-[10px] tabular-nums text-foreground/70"
+          >
             {hora(msg.created_at)}
           </span>
           {saindo && <StatusDeEntrega status={msg.delivery_status} />}
@@ -233,12 +261,7 @@ function AudioDoBalao({ path }: { path: string }) {
   }
   if (!url) {
     return (
-      <button
-        type="button"
-        onClick={pedir}
-        disabled={carregando}
-        className="rounded-md border border-foreground/15 px-2 py-1 text-xs font-medium text-laranja-escuro disabled:opacity-50"
-      >
+      <button type="button" onClick={pedir} disabled={carregando} className={botaoMidia}>
         {carregando ? 'Carregando…' : 'Ouvir áudio'}
       </button>
     )
@@ -257,25 +280,15 @@ function DocumentoDoBalao({ path, nome }: { path: string; nome: string | null })
   }
   if (!url) {
     return (
-      <button
-        type="button"
-        onClick={pedir}
-        disabled={carregando}
-        className="flex items-center gap-1.5 rounded-md border border-foreground/15 px-2 py-1 text-xs font-medium text-laranja-escuro disabled:opacity-50"
-      >
-        <FileText className="size-3.5" />
+      <button type="button" onClick={pedir} disabled={carregando} className={botaoMidia}>
+        <FileText aria-hidden className="size-3.5" />
         {carregando ? 'Carregando…' : rotulo}
       </button>
     )
   }
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center gap-1.5 text-xs font-medium text-laranja-escuro underline"
-    >
-      <FileText className="size-3.5" />
+    <a href={url} target="_blank" rel="noopener noreferrer" className={botaoMidia}>
+      <FileText aria-hidden className="size-3.5" />
       {rotulo}
     </a>
   )

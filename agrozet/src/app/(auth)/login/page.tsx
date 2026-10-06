@@ -52,7 +52,7 @@ function LoginDemonstracao() {
   const router = useRouter()
 
   return (
-    <Card className="reveal-rise w-full">
+    <Card className="w-full">
       <CardHeader className="items-center gap-3 text-center">
         <Image
           src="/agrozet-logo.png"
@@ -60,22 +60,21 @@ function LoginDemonstracao() {
           width={391}
           height={120}
           priority
-          className="mx-auto h-12 w-auto"
+          className="mx-auto h-10 w-auto"
         />
-        <CardTitle className="font-display text-xl">Entrar no CRM</CardTitle>
+        <CardTitle className="font-display text-lg font-semibold tracking-tight">
+          Entrar no CRM
+        </CardTitle>
         <CardDescription>Atendimento WhatsApp do Pet Shop Agrozet</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <p className="text-center text-xs text-muted-foreground">
-          Esta é uma demonstração: o login está desativado e os dados são fictícios.
-        </p>
+      <CardContent>
         <Button
           type="button"
           size="lg"
           className="w-full"
           onClick={() => router.replace('/conversas')}
         >
-          Entrar (modo demonstração)
+          Entrar
         </Button>
       </CardContent>
     </Card>
@@ -118,7 +117,7 @@ function LoginSupabase() {
   }
 
   return (
-    <Card className="reveal-rise w-full">
+    <Card className="w-full">
       <CardHeader className="items-center gap-3 text-center">
         <Image
           src="/agrozet-logo.png"
@@ -126,9 +125,11 @@ function LoginSupabase() {
           width={391}
           height={120}
           priority
-          className="mx-auto h-12 w-auto"
+          className="mx-auto h-10 w-auto"
         />
-        <CardTitle className="font-display text-xl">Entrar no CRM</CardTitle>
+        <CardTitle className="font-display text-lg font-semibold tracking-tight">
+          Entrar no CRM
+        </CardTitle>
         <CardDescription>Atendimento WhatsApp do Pet Shop Agrozet</CardDescription>
       </CardHeader>
       <CardContent>

@@ -5,11 +5,10 @@
 // Em vez de screenshots estáticos, o demo roda os MESMOS componentes e a MESMA
 // lógica de bot do produto, só com este módulo no lugar do banco.
 //
-// REGRA DE ISOLAMENTO: nada em `src/lib/demo/` ou `src/components/demo/` pode
-// ser importado por código de produção, e nada aqui escreve em lugar nenhum. O
-// demo vive nas rotas `/demo` e `/demo/crm`, que são públicas de propósito —
-// é por isso que ele NÃO reaproveita `/conversas` nem mexe na autenticação:
-// uma env var esquecida não pode abrir o CRM real.
+// COMO ISTO ENTRA NO APP: só através de `src/lib/mock/store.ts`, e só quando
+// `MODO_MOCK` (`NEXT_PUBLIC_MOCK=1`) está ligado. Nada aqui escreve em lugar
+// nenhum e nada aqui é alcançado com a flag desligada — nesse caso o `false`
+// é literal em build e este módulo sai do bundle por dead-code elimination.
 //
 // Os telefones são da faixa 5534 (Uberlândia) com o prefixo 9999, reservado
 // para ficção. Os nomes e pets são inventados.

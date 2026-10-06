@@ -3,7 +3,7 @@
 // Sem acentos nos nomes dos testes, como no resto da suite deste projeto.
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { CONVERSAS_DEMO, BOT_CONFIG_DEMO, BOT_OPCOES_DEMO } from '@/lib/demo/dados'
+import { CONVERSAS_DEMO, BOT_CONFIG_DEMO, BOT_OPCOES_DEMO } from '@/lib/mock/dados'
 import {
   lerConversas,
   lerMensagens,
