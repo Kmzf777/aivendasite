@@ -11,6 +11,7 @@ da Meta, atendido por humanos, com um bot de botão que faz a triagem inicial.
 **Spec:** `docs/superpowers/specs/2026-10-05-agrozet-crm-design.md`
 **Plano da Fase 1:** `docs/superpowers/plans/2026-10-05-fase1-fundacao-e-bot.md`
 **Setup do zero:** `SETUP.md` · **Árvore comentada:** `TREE.md`
+**Retomar numa sessão nova:** `docs/REATIVACAO.md`
 
 ---
 
@@ -35,9 +36,39 @@ npm run lint     # ESLint
 npm run test     # vitest run
 ```
 
-Última execução verificada (2026-10-05): `npm run test` → **111 testes, 10
+Última execução verificada (2026-10-05): `npm run test` → **164 testes, 12
 arquivos, todos passando**; `npx tsc --noEmit`, `npm run lint` e `npm run build`
 limpos.
+
+### Modo mock — o CRM rodando sem Supabase
+
+```sh
+# .env.local
+NEXT_PUBLIC_MOCK=1
+```
+
+Com a flag, o app roda **inteiro sobre dados em memória** (`src/lib/mock/store.ts`,
+semeado de `src/lib/demo/dados.ts`), **sem Supabase e sem login**. É o que se
+mostra à dona do petshop enquanto não existe infraestrutura.
+
+**A flag é `false` por padrão, e esse default é a segurança do arranjo.** Sem a
+variável, middleware, layout, hooks e composer seguem o caminho de produção
+inalterado — sessão exigida, Supabase de verdade. Um deploy que esqueça a
+variável é seguro, não exposto.
+
+**A flag NUNCA pode passar a olhar `NODE_ENV`.** Preview da Vercel roda como
+produção; amarrar o modo demonstração ao ambiente abriria o CRM num preview.
+
+As telas `/clientes`, `/disparos`, `/bot` e `/erros` são **maquete**: só aparecem
+na Sidebar com a flag ligada, e cada uma diz na própria tela o que ainda não
+existe. `/bot` é exceção parcial — a **validação dos limites da Meta é real**
+(usa `validarOpcao`/`validarConfig` e `montarMenu` de produção); só a gravação
+que não persiste.
+
+Ao desligar o modo mock, confira: a variável fora do ambiente, o login voltando a
+pedir senha, e as quatro telas voltando a aparecer desabilitadas na Sidebar.
+
+Estado completo do projeto e o que falta para sair do mockup: **`docs/REATIVACAO.md`**.
 
 ---
 

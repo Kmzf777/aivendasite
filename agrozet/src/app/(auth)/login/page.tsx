@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { MODO_MOCK } from '@/lib/mock/modo'
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 const loginSchema = z.object({
@@ -26,9 +27,64 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>
 
+// MODO MOCK — a escolha, e por quê.
+//
+// Duas opções estavam na mesa: redirecionar `/login` direto para `/conversas`,
+// ou manter a tela com UM botão "Entrar (modo demonstração)". Ficou o botão.
+//
+// O motivo é o botão "Sair" da Sidebar, que existe e continua existindo no
+// mockup: ele navega para `/login`. Com redirect automático, apertar "Sair" na
+// frente da dona do petshop devolveria ela a `/conversas` num pisco — a leitura
+// inevitável é "o sistema não deixa sair" ou "travou". Com o botão, "Sair"
+// chega numa tela de login reconhecível, com a marca, e UM clique volta para
+// dentro: o fluxo se explica sozinho e ninguém digita uma senha que não existe.
+// De quebra, a tela de login — que é parte do produto — continua visível na
+// apresentação, só sem autenticação por trás.
+//
+// Branch no topo do componente para que o caminho de produção (flag ausente)
+// seja literalmente o mesmo código de antes, com os mesmos hooks.
+export default function LoginPage() {
+  return MODO_MOCK ? <LoginDemonstracao /> : <LoginSupabase />
+}
+
+/** Tela de login do modo demonstração: entra sem autenticar nada. */
+function LoginDemonstracao() {
+  const router = useRouter()
+
+  return (
+    <Card className="reveal-rise w-full">
+      <CardHeader className="items-center gap-3 text-center">
+        <Image
+          src="/agrozet-logo.png"
+          alt="Pet Shop Agrozet"
+          width={391}
+          height={120}
+          priority
+          className="mx-auto h-12 w-auto"
+        />
+        <CardTitle className="font-display text-xl">Entrar no CRM</CardTitle>
+        <CardDescription>Atendimento WhatsApp do Pet Shop Agrozet</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <p className="text-center text-xs text-muted-foreground">
+          Esta é uma demonstração: o login está desativado e os dados são fictícios.
+        </p>
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          onClick={() => router.replace('/conversas')}
+        >
+          Entrar (modo demonstração)
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
 // Não há cadastro nem "esqueci minha senha": as contas das atendentes são
 // criadas pelo admin no dashboard do Supabase (Authentication → Users).
-export default function LoginPage() {
+function LoginSupabase() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)

@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
+import { MODO_MOCK } from '@/lib/mock/modo'
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { cn } from '@/lib/utils'
@@ -30,6 +31,9 @@ type NavItem = {
 // Na Fase 1 só /conversas existe. Os outros itens já estão aqui, DESABILITADOS,
 // de propósito: quando a Fase 2 criar as telas, basta remover o `soon` — nenhum
 // outro agente precisa editar este arquivo para "adicionar o link".
+//
+// MODO MOCK: no mockup as quatro telas existem (em memória), então o `soon` é
+// ignorado e os quatro viram link de verdade — ver `desabilitado` abaixo.
 const navItems: NavItem[] = [
   { href: '/conversas', label: 'Conversas', icon: MessageSquare },
   { href: '/clientes', label: 'Clientes', icon: Users, soon: true },
@@ -47,10 +51,23 @@ export function Sidebar() {
   const queryClient = useQueryClient()
   // isAdmin cai para false enquanto carrega; usamos isLoading para NÃO renderizar
   // os itens admin antes de resolver — senão eles apareceriam e desapareceriam.
-  const { isAdmin, isLoading } = useIsAdmin()
+  //
+  // MODO MOCK: `useIsAdmin` lê `auth.getUser()` do Supabase e no mockup não há
+  // sessão nem projeto — ele resolveria para `false` e esconderia Bot e Erros,
+  // justamente as telas que a demonstração precisa mostrar. A correção fica
+  // AQUI, sobre o resultado do hook, porque `src/hooks/useIsAdmin.ts` não é
+  // deste escopo; o hook continua sendo chamado (nada de hook condicional) e
+  // com a flag desligada seu resultado é usado como sempre.
+  const admin = useIsAdmin()
+  const isAdmin = MODO_MOCK ? true : admin.isAdmin
+  const isLoading = MODO_MOCK ? false : admin.isLoading
 
   async function handleLogout() {
-    await getSupabaseBrowserClient().auth.signOut()
+    // MODO MOCK: não há sessão para encerrar, e `getSupabaseBrowserClient()`
+    // lança sem as variáveis do projeto — sem esta guarda o botão "Sair"
+    // quebraria em vez de navegar. Limpa o cache e vai para `/login`, que no
+    // mockup mostra o botão "Entrar (modo demonstração)".
+    if (!MODO_MOCK) await getSupabaseBrowserClient().auth.signOut()
     // Cache por usuário (identidade, conversas) não pode vazar para o próximo
     // login nesta mesma aba.
     queryClient.clear()
@@ -86,7 +103,10 @@ export function Sidebar() {
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`)
 
-          if (item.soon) {
+          // No mockup as telas existem: o item deixa de ser "em breve".
+          const desabilitado = item.soon && !MODO_MOCK
+
+          if (desabilitado) {
             return (
               <span
                 key={item.href}

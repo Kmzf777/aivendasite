@@ -84,6 +84,11 @@ export default function HeroDemo() {
           style={{ animationDelay: '320ms' }}
         >
           <Button
+            // `nativeButton={false}` e obrigatorio quando o Button vira <a>/<Link>:
+            // o Base UI assume botao nativo e avisa que a semantica se perde.
+            // Aqui a semantica CERTA e a de link (navega, abre em nova aba com
+            // ctrl+clique), entao a correcao e avisar o Base UI, nao virar botao.
+            nativeButton={false}
             render={<a href={`#${ID_SIMULADOR}`} />}
             onClick={rolarAteSimulador}
             className="h-12 rounded-full px-6 text-base font-semibold shadow-sm"
@@ -92,6 +97,7 @@ export default function HeroDemo() {
           </Button>
           <Button
             variant="outline"
+            nativeButton={false}
             render={<Link href="/demo/crm" />}
             className="h-12 rounded-full border-laranja/35 bg-transparent px-6 text-base font-semibold text-laranja-escuro hover:bg-secondary"
           >

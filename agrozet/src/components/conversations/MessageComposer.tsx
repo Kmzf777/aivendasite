@@ -5,6 +5,8 @@ import { ImagePlus, Loader2, Lock, Send, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import type { WindowStatus } from '@/lib/janela24h'
+import { MODO_MOCK } from '@/lib/mock/modo'
+import { enviarTexto } from '@/lib/mock/store'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -55,6 +57,19 @@ export default function MessageComposer({ phone, janela, onEnviado }: Props) {
 
     const corpo = texto.trim()
     if (!corpo) return
+
+    // MODO MOCK: escreve no store em memória em vez de chamar
+    // `/api/send-message` — a rota exige sessão e Supabase, que no mockup não
+    // existem, e devolveria 401. O tratamento de sucesso é o MESMO do caminho
+    // real (limpa a caixa e avisa o pai), para a tela se comportar igual.
+    // Com a flag desligada nada disto roda e o `fetch` abaixo é o de antes.
+    if (MODO_MOCK) {
+      enviarTexto(phone, corpo)
+      setTexto('')
+      onEnviado()
+      return
+    }
+
     setEnviando(true)
     try {
       const res = await fetch('/api/send-message', {
@@ -153,7 +168,16 @@ export default function MessageComposer({ phone, janela, onEnviado }: Props) {
           variant="ghost"
           size="icon-lg"
           aria-label="Anexar imagem"
-          disabled={enviando}
+          // No mockup o botão fica VISÍVEL e desabilitado, não escondido: a
+          // dona do petshop precisa ver que o CRM manda foto, e o `title`
+          // explica por que não dá para experimentar agora. Esconder faria a
+          // demonstração parecer um produto sem anexo.
+          disabled={enviando || MODO_MOCK}
+          title={
+            MODO_MOCK
+              ? 'Anexar imagem não funciona na demonstração: nenhum arquivo é enviado ou armazenado.'
+              : undefined
+          }
           onClick={() => inputArquivoRef.current?.click()}
         >
           <ImagePlus />

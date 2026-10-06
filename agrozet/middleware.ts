@@ -1,7 +1,22 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { MODO_MOCK } from '@/lib/mock/modo'
 
 export async function middleware(request: NextRequest) {
+  // MODO MOCK — a guarda desta rota é a flag, e o default dela é `false`.
+  //
+  // `MODO_MOCK` é `NEXT_PUBLIC_MOCK === '1'`: um deploy que esqueça a variável
+  // cai neste `if` como `false` e a checagem de sessão abaixo continua valendo
+  // integralmente. É de propósito que a flag NÃO olha `NODE_ENV` — preview da
+  // Vercel roda como produção, e amarrar o modo demonstração ao ambiente
+  // abriria o CRM real num deploy de preview.
+  //
+  // O `return` precisa vir ANTES de `createServerClient`: sem
+  // NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY (que é exatamente
+  // o cenário do mockup — não existe projeto Supabase) o cliente lança na
+  // construção, e o middleware derrubaria toda página do matcher com 500.
+  if (MODO_MOCK) return NextResponse.next({ request })
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

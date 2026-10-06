@@ -131,6 +131,7 @@ export default function DemoPage() {
 
           <div className="mt-12 flex flex-wrap items-center gap-3">
             <Button
+              nativeButton={false}
               render={<Link href="/demo/crm" />}
               className="h-12 rounded-full px-6 text-base font-semibold shadow-sm"
             >

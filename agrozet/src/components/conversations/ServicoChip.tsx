@@ -1,6 +1,9 @@
 'use client'
 
+import { useMemo, useSyncExternalStore } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { MODO_MOCK } from '@/lib/mock/modo'
+import { lerOpcoesBot, subscribe, versao } from '@/lib/mock/store'
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { cn } from '@/lib/utils'
 
@@ -29,9 +32,27 @@ export type OpcaoBot = {
 // quando o dono do pet shop edita o menu, não a cada atendimento.
 const UMA_HORA = 60 * 60 * 1000
 
-export function useBotOpcoes() {
-  return useQuery<OpcaoBot[]>({
+/**
+ * O tipo de retorno fixado em uma chave — `data` é tudo que os dois
+ * consumidores (`ServicoChip` e `MessageBubble`) leem. Declarado porque o modo
+ * mock não devolve um `UseQueryResult` inteiro.
+ */
+export type ResultadoBotOpcoes = { data: OpcaoBot[] | undefined }
+
+export function useBotOpcoes(): ResultadoBotOpcoes {
+  // MODO MOCK: o menu vem do store, sem rede. Mesma mecânica de `useConversas`
+  // (snapshot = `versao()`, número estável; os dados são derivados dele), e
+  // `enabled: false` mantém o `queryFn` parado. Com a flag desligada isto é o
+  // `useQuery` de antes, com o mesmo `staleTime` de 1 h.
+  const versaoMock = useSyncExternalStore(subscribe, versao, versao)
+  const dadosMock = useMemo(() => {
+    void versaoMock // a versão É a dependência: muda a cada escrita no store
+    return MODO_MOCK ? lerOpcoesBot() : undefined
+  }, [versaoMock])
+
+  const query = useQuery<OpcaoBot[]>({
     queryKey: ['bot-opcoes'],
+    enabled: !MODO_MOCK,
     staleTime: UMA_HORA,
     // Configuração não precisa do tique de 15 s das conversas.
     refetchInterval: false,
@@ -44,6 +65,10 @@ export function useBotOpcoes() {
       return data ?? []
     },
   })
+
+  if (MODO_MOCK) return { data: dadosMock }
+
+  return query
 }
 
 type Props = {

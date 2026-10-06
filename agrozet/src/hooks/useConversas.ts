@@ -1,6 +1,9 @@
 'use client'
 
+import { useMemo, useSyncExternalStore } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { MODO_MOCK } from '@/lib/mock/modo'
+import { lerConversas, subscribe, versao } from '@/lib/mock/store'
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { montarLista, type ItemConversa } from '@/lib/listaConversas'
 
@@ -24,6 +27,22 @@ const COLUNAS_LISTA = 'phone, direction, created_at, content, message_type'
 export type { ItemConversa }
 
 /**
+ * A forma que os componentes consomem — as quatro chaves que `Conversations`
+ * usa. Está declarada porque o modo mock não devolve um `UseQueryResult`
+ * inteiro: fixar o contrato aqui faz o compilador reclamar se alguém passar a
+ * depender de uma chave que só o React Query tem.
+ */
+export type ResultadoConversas = {
+  data: ItemConversa[] | undefined
+  isLoading: boolean
+  isError: boolean
+  refetch: () => void
+}
+
+/** Estável por referência: no mock não há o que recarregar, a fonte é local. */
+const SEM_REFETCH = () => {}
+
+/**
  * Lista de conversas da caixa única: pendentes no topo, depois por recência.
  *
  * Realtime do Supabase fica FORA da Fase 1 de propósito. Um `refetchInterval`
@@ -32,9 +51,29 @@ export type { ItemConversa }
  * free tier de 5 GB/mês é o custo que primeiro estoura. Quando a Fase 2 exigir
  * latência de segundos, o lugar da troca é aqui.
  */
-export function useConversas() {
-  return useQuery<ItemConversa[]>({
+export function useConversas(): ResultadoConversas {
+  // MODO MOCK: a fonte é o store em memória.
+  //
+  // Os dois hooks são chamados SEMPRE — hook condicional é proibido —, e o que
+  // a flag decide é qual dos dois tem efeito. Com a flag desligada, `enabled`
+  // volta a `true` e este hook é o `useQuery` de antes, com o mesmo
+  // `queryFn`, o mesmo tique de 15 s e o mesmo retorno; a inscrição no store é
+  // inerte, porque nada escreve nele fora do modo mock.
+  //
+  // `versao` (um número) é o snapshot, não `lerConversas`: `lerConversas`
+  // devolve um array novo a cada chamada, e `useSyncExternalStore` compara o
+  // snapshot por identidade — passar a função de leitura ali faria o React
+  // concluir "mudou" em todo render e entrar em laço infinito. O terceiro
+  // argumento é o `getServerSnapshot`; sem ele o SSR lança.
+  const versaoMock = useSyncExternalStore(subscribe, versao, versao)
+  const dadosMock = useMemo(() => {
+    void versaoMock // a versão É a dependência: muda a cada escrita no store
+    return MODO_MOCK ? lerConversas() : undefined
+  }, [versaoMock])
+
+  const query = useQuery<ItemConversa[]>({
     queryKey: ['conversas'],
+    enabled: !MODO_MOCK,
     refetchInterval: 15_000,
     // O `staleTime` global é de 2 min; aqui ele precisa ser 0, senão o tique de
     // 15 s encontraria o cache "fresco" e não buscaria nada.
@@ -63,4 +102,11 @@ export function useConversas() {
       return montarLista(mensagens.data ?? [], clientes.data ?? [])
     },
   })
+
+  if (MODO_MOCK) {
+    // Leitura local é síncrona: nunca "carregando", nunca erro de rede.
+    return { data: dadosMock, isLoading: false, isError: false, refetch: SEM_REFETCH }
+  }
+
+  return query
 }
