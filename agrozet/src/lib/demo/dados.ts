@@ -69,10 +69,38 @@ export const TITULOS_SERVICO: Record<string, string> = Object.fromEntries(
 // conversa datada de "02/10" numa demo vista em dezembro parece sistema
 // abandonado; "14:32, hoje" parece sistema vivo. É a diferença entre a cliente
 // pensar "isso está rodando" e "isso é uma maquete".
-const agora = () => Date.now()
-const minAtras = (m: number) => new Date(agora() - m * 60_000).toISOString()
+//
+// A BASE e capturada UMA vez, nao a cada chamada. Com `Date.now()` por mensagem,
+// duas falas seguidas do mesmo minuto caiam no MESMO milissegundo e os
+// `created_at` empatavam — e empate quebra a lista de verdade: `montarLista`
+// escolhe a ultima mensagem por `created_at`, o desempate fica com a primeira do
+// array (a inbound), e a conversa aparece como PENDENTE mesmo tendo sido
+// respondida. Foi visto na tela: Claudia e Patricia, que terminam com a nossa
+// resposta, apareciam com o ponto laranja e com a pergunta do cliente na previa.
+const BASE = Date.now()
+const minAtras = (m: number) => new Date(BASE - m * 60_000).toISOString()
 const hAtras = (h: number) => minAtras(h * 60)
 const dAtras = (d: number) => hAtras(d * 24)
+
+/**
+ * Forca os `created_at` de uma conversa a crescerem estritamente, na ORDEM DO
+ * ARRAY — que e a ordem em que a conversa foi escrita, logo a ordem real dos
+ * fatos.
+ *
+ * Isto existe para que os horarios possam continuar sendo escritos de forma
+ * legivel (`hAtras(5)` quatro vezes seguidas, porque tudo aconteceu "ha cinco
+ * horas") sem que o empate volte a inverter quem falou por ultimo. Escrever 40
+ * timestamps a mao, estritamente decrescentes, seria fragil: bastaria alguem
+ * inserir uma fala no meio para reintroduzir o bug em silencio.
+ */
+function ordenarNoTempo(msgs: MensagemTimeline[]): MensagemTimeline[] {
+  let anterior = 0
+  return msgs.map((m) => {
+    const t = Math.max(new Date(m.created_at).getTime(), anterior + 1000)
+    anterior = t
+    return { ...m, created_at: new Date(t).toISOString() }
+  })
+}
 
 export type ConversaDemo = {
   phone: string
@@ -312,6 +340,13 @@ export const CONVERSAS_DEMO: ConversaDemo[] = [
     ],
   },
 ]
+
+// Aplica a monotonicidade a TODAS as conversas, uma vez, na carga do modulo.
+// Feito aqui e nao em cada `msg(...)` de proposito: a regra depende da sequencia
+// inteira, nao de uma mensagem isolada.
+for (const c of CONVERSAS_DEMO) {
+  c.mensagens = ordenarNoTempo(c.mensagens)
+}
 
 /** Todas as mensagens do demo, achatadas. */
 export function mensagensDemo(): MensagemTimeline[] {
