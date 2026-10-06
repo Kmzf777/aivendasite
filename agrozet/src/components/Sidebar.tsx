@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
@@ -86,15 +85,22 @@ export function Sidebar() {
     // ela sozinha comeria dois terços de um celular de 375px e a conversa
     // ganharia scroll horizontal.
     <aside className="flex h-full w-14 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:w-60">
+      {/* A MARCA E TEXTO, NAO IMAGEM, e isso nao e preferencia.
+          `public/agrozet-logo.png` tem o letreiro em marrom escuro sobre fundo
+          transparente — foi desenhado para superficie clara. Sobre a sidebar
+          escura a palavra "agrozet" fica ilegivel (visto na tela: so a pata
+          aparecia). Como texto, a cor vem dos tokens e o contraste e garantido
+          nos dois temas. E o mesmo caminho do sistema de referencia, que tambem
+          escreve o nome em dois spans em vez de usar o PNG.
+          O logo continua em uso no login, onde o fundo E claro. */}
       <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-2 md:px-4">
-        <Image
-          src="/agrozet-logo.png"
-          alt="Pet Shop Agrozet"
-          width={391}
-          height={120}
-          priority
-          className="h-auto w-full max-w-[120px] object-contain"
-        />
+        <span className="font-display text-lg leading-none font-extrabold tracking-tight">
+          {/* No trilho de icones (abaixo de md) so cabe a inicial. */}
+          <span className="md:hidden">a</span>
+          <span className="hidden md:inline">agro</span>
+          <span className="text-sidebar-primary">zet</span>
+        </span>
+        <span className="sr-only">Pet Shop Agrozet</span>
       </div>
 
       <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
