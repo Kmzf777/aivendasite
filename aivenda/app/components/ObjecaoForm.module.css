@@ -1,0 +1,234 @@
+.forma {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding-bottom: 20px;
+}
+
+/* ------------------------------------------------ cabeçalho */
+.topo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--linha);
+}
+.identificacao {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.id {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 12px;
+  color: var(--tinta-fraca);
+  background: var(--vazio);
+  border: 1px solid var(--linha);
+  border-radius: 5px;
+  padding: 2px 8px;
+}
+.selo {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+  border: 1px solid var(--linha-viva);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+/* O tipo muda a leitura do card: objeção e pergunta são conversa, stop é ordem. */
+.selo[data-tipo="objecao"] {
+  color: var(--cliente);
+  border-color: color-mix(in oklab, var(--cliente) 45%, transparent);
+}
+.selo[data-tipo="pergunta"] {
+  color: var(--voce);
+  border-color: color-mix(in oklab, var(--voce) 45%, transparent);
+}
+.selo[data-tipo="triagem"] {
+  color: var(--sinal);
+  border-color: color-mix(in oklab, var(--sinal) 45%, transparent);
+}
+.selo[data-tipo="stop"] {
+  color: var(--erro);
+  border-color: color-mix(in oklab, var(--erro) 50%, transparent);
+}
+.alterada {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sinal);
+}
+.nome {
+  font-family: var(--fonte-serif), serif;
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+}
+
+/* ------------------------------------------------ blocos */
+.bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.tituloBloco {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tituloBloco h3 {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tinta);
+}
+.tituloBloco p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--tinta-fraca);
+  max-width: 76ch;
+}
+.tituloBloco code {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 12px;
+  color: var(--tinta);
+}
+
+.duasColunas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 22px;
+}
+@media (max-width: 860px) {
+  .duasColunas {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------ prévia do card */
+.previa {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 20px;
+  background: var(--alto);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  /* Lembra o card da call sem imitá-lo: ali a tela é de leitura de um
+     segundo, aqui é só uma conferência do que foi escrito. */
+}
+.previaHeadline {
+  font-family: var(--fonte-serif), serif;
+  font-size: 27px;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: var(--tinta);
+}
+.previaArgumento {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--tinta-fraca);
+  max-width: 62ch;
+}
+.previaPivot {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sinal);
+  padding-top: 4px;
+  border-top: 1px solid var(--linha);
+}
+
+/* ------------------------------------------------ extras preservados */
+.extras {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--linha);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-p);
+  overflow: hidden;
+}
+.extra {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 14px;
+  padding: 11px 14px;
+  background: var(--vazio);
+}
+@media (max-width: 720px) {
+  .extra {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+.extra dt {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 12px;
+  color: var(--tinta-fraca);
+  word-break: break-all;
+}
+.extra dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-family: var(--fonte-mono), monospace;
+  font-size: 12px;
+  color: var(--tinta-fantasma);
+  word-break: break-word;
+}
+.extraFicha {
+  background: var(--alto);
+  border: 1px solid var(--linha-viva);
+  border-radius: 5px;
+  padding: 1px 7px;
+  color: var(--tinta-fraca);
+}
+
+/* ------------------------------------------------ rodapé */
+.rodape {
+  padding-top: 20px;
+  border-top: 1px solid var(--linha);
+}
+.btnRemover {
+  font-size: 13px;
+  color: var(--tinta-fraca);
+  background: none;
+}
+.btnRemover:hover:not(:disabled) {
+  color: var(--erro);
+  border-color: color-mix(in oklab, var(--erro) 55%, transparent);
+}
+.confirma {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  font-size: 13.5px;
+  color: #ffc9c5;
+  background: color-mix(in oklab, var(--erro) 11%, var(--vazio));
+  border: 1px solid color-mix(in oklab, var(--erro) 40%, transparent);
+  border-radius: var(--raio-p);
+}
+.confirma span {
+  flex: 1 1 260px;
+}
+.btnPerigo {
+  background: var(--erro);
+  border-color: var(--erro);
+  color: #2a0603;
+  font-size: 13px;
+  padding: 8px 15px;
+}
+/* Seletor de elemento, não `.btn`: dentro de um CSS Module `.btn` viraria uma
+   classe com hash e não casaria com a classe global de globals.css. */
+.confirma button {
+  font-size: 13px;
+  padding: 8px 15px;
+}

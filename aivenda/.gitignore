@@ -1,0 +1,6 @@
+.env
+node_modules/
+objecoes.json
+app/.next/
+app/node_modules/
+limiares.json

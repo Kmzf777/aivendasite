@@ -1,0 +1,213 @@
+.casa {
+  list-style: none;
+}
+
+.cartao {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 10px 7px 13px;
+  background: var(--alto);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-p);
+  overflow: hidden;
+  cursor: grab;
+  transition: border-color .16s var(--mola), background .16s var(--mola);
+}
+.cartao:hover { border-color: var(--linha-viva); }
+.cartao:active { cursor: grabbing; }
+
+/* O trilho. A temperatura do lead tem que chegar pela visão periférica:
+   você vê a coluna inteira de vermelho antes de ler um nome. */
+.cartao::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--linha-viva);
+}
+.cartao[data-temp="atencao"]::before { background: var(--sinal); }
+.cartao[data-temp="frio"]::before { background: var(--erro); }
+.cartao[data-temp="frio"] {
+  border-color: color-mix(in oklab, var(--erro) 26%, var(--linha));
+  background: color-mix(in oklab, var(--erro) 5%, var(--alto));
+}
+
+/* Enquanto está sendo arrastado o original fica fantasma: o que você vê
+   andando é o fantasma do navegador, e dois cartões cheios confundem. */
+.cartao[data-arrastando="sim"] {
+  opacity: .32;
+  border-style: dashed;
+}
+.cartao[aria-busy="true"] { cursor: progress; }
+
+/* Grava e espera: uma varredura no topo do cartão. Sem isso o vendedor não
+   sabe se o movimento foi para o banco ou morreu no navegador. */
+.gravando {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--voce), transparent);
+  animation: varre .9s linear infinite;
+}
+@keyframes varre {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+/* A regra global encurta a duração para .01ms, o que num loop infinito seria
+   pior do que o movimento. Aqui ele simplesmente para. */
+@media (prefers-reduced-motion: reduce) {
+  .gravando { animation: none; opacity: .85; }
+}
+
+.cabeca { font-size: inherit; font-weight: inherit; }
+
+.titulo {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -.005em;
+  color: var(--tinta);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.titulo:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--linha-viva);
+  text-underline-offset: 3px;
+}
+
+.categoria {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+  margin-top: -2px;
+}
+
+/* O bloco de quem decide é separado por um fio: ele não é "mais um campo"
+   do lead, é o motivo de o lead estar neste quadro. */
+.decisor {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 3px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--linha);
+}
+
+.quem { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px; font-size: 12.5px; }
+.quem strong { font-weight: 600; color: var(--tinta); }
+.quem em {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+}
+
+.fone { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.fone a {
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  letter-spacing: -.01em;
+  color: var(--tinta);
+  text-decoration: none;
+  padding: 1px 5px;
+  margin-left: -5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, .035);
+  white-space: nowrap;
+}
+.fone a:hover { color: var(--voce); background: color-mix(in oklab, var(--voce) 14%, transparent); }
+
+.copiar {
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+  background: none;
+  border: 0;
+  padding: 2px 3px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .16s var(--mola), color .16s var(--mola);
+}
+.cartao:hover .copiar,
+.copiar:focus-visible { opacity: 1; }
+.copiar:hover { color: var(--tinta); }
+
+.mais { font-size: 10.5px; color: var(--tinta-fantasma); }
+
+.furo {
+  font-size: 11px;
+  line-height: 1.3;
+  color: color-mix(in oklab, var(--erro) 70%, var(--tinta));
+}
+
+.pe {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+/* As setas vivem SEMPRE visíveis, não no hover. São o caminho de teclado
+   para mover o cartão — esconder no hover seria esconder a função. */
+.seta {
+  flex-shrink: 0;
+  width: 24px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  color: var(--tinta-fraca);
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color .14s var(--mola), border-color .14s var(--mola), background .14s var(--mola);
+}
+.seta:hover:not(:disabled):not([aria-disabled="true"]) {
+  color: var(--tinta);
+  background: var(--vazio);
+  border-color: var(--linha-viva);
+}
+.seta:disabled { opacity: .26; cursor: not-allowed; }
+/* Gravando: indisponível por um instante, mas ainda focável. */
+.seta[aria-disabled="true"] { opacity: .5; cursor: progress; }
+
+.parado {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 10.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--tinta-fantasma);
+}
+.luz {
+  flex-shrink: 0;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--linha-viva);
+}
+.parado[data-temp="atencao"] { color: var(--sinal); }
+.parado[data-temp="atencao"] .luz { background: var(--sinal); box-shadow: 0 0 7px var(--sinal); }
+.parado[data-temp="frio"] { color: var(--erro); }
+.parado[data-temp="frio"] .luz { background: var(--erro); box-shadow: 0 0 7px var(--erro); }

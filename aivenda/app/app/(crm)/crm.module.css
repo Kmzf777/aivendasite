@@ -1,0 +1,15 @@
+.casco {
+  display: grid;
+  grid-template-columns: 236px 1fr;
+  min-height: 100dvh;
+}
+
+/* Em modo foco o menu sai da grade inteira, não só fica invisível:
+   o conteúdo precisa da largura toda. */
+.casco:has([data-foco="sim"]) { grid-template-columns: 0 1fr; }
+
+.conteudo { min-width: 0; overflow-x: hidden; }
+
+@media (max-width: 860px) {
+  .casco { grid-template-columns: 64px 1fr; }
+}

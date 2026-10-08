@@ -1,0 +1,258 @@
+/* ==================================================================
+   O quadro.
+
+   A densidade é o problema real de um kanban de cinco colunas num
+   notebook. Duas decisões resolvem:
+
+   1. As colunas NÃO têm a mesma largura. 'Fechou' e 'Perdeu' são arquivo,
+      não operação: ganham menos espaço, e as três colunas onde o dinheiro
+      se move ficam com o resto.
+   2. A rolagem vertical é POR COLUNA, não da página. O cabeçalho de cada
+      coluna fica sempre à vista e a página nunca sai do lugar — o quadro
+      ocupa a altura da janela e pronto.
+   ================================================================== */
+
+.tudo {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 9px;
+  min-height: 0;
+}
+
+/* ---------------------------------------------------------- resumo */
+
+.resumo {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.medida {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--tinta-fraca);
+}
+.medida b {
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--tinta);
+}
+/* O número que o vendedor precisa odiar. */
+.medida[data-grave="sim"] { color: color-mix(in oklab, var(--erro) 45%, var(--tinta-fraca)); }
+.medida[data-grave="sim"] b { color: var(--erro); }
+
+.dica {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--tinta-fantasma);
+}
+.dica kbd {
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 0 4px;
+  border: 1px solid var(--linha-viva);
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------- aviso */
+
+/* Altura reservada sempre: se a linha aparecesse só quando há aviso, o
+   quadro inteiro pularia 19px a cada movimento. */
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 18px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--tinta-fraca);
+  transition: opacity .2s var(--mola);
+}
+.aviso::before {
+  content: "";
+  flex-shrink: 0;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.aviso[data-tom="nenhum"] { opacity: 0; }
+.aviso[data-tom="ok"] { color: var(--ok); }
+.aviso[data-tom="demo"] { color: var(--sinal); }
+.aviso[data-tom="erro"] { color: var(--erro); font-weight: 600; }
+
+/* ---------------------------------------------------------- área */
+
+.area {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 11px;
+  min-height: 0;
+}
+
+/* O painel só rouba largura do quadro quando há largura sobrando. Abaixo
+   disso ele vira camada sobre a direita da tela — melhor cobrir uma coluna
+   por um instante do que apertar as cinco permanentemente. */
+.doca {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(410px, 100%);
+  z-index: 50;
+  min-height: 0;
+  box-shadow: -24px 0 60px rgba(0, 0, 0, .55);
+}
+
+/* 1660px não é número mágico: é a largura a partir da qual sobra, depois do
+   menu (236px), do respiro (40px) e do painel (360px), mais do que a largura
+   mínima das cinco colunas (938px). Docar o painel antes disso trocaria uma
+   camada temporária por rolagem horizontal permanente — pior negócio. */
+@media (min-width: 1660px) {
+  .area[data-painel="sim"] { grid-template-columns: minmax(0, 1fr) 360px; }
+  .doca {
+    position: relative;
+    inset: auto;
+    width: auto;
+    z-index: auto;
+    box-shadow: none;
+  }
+}
+
+/* ---------------------------------------------------------- quadro */
+
+.quadro {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(198px, 1fr)) repeat(2, minmax(154px, .7fr));
+  gap: 9px;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 3px;
+  /* Rolagem horizontal que não atrapalha: a coluna encosta na borda em vez
+     de parar no meio. */
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--linha-viva) transparent;
+}
+.quadro::-webkit-scrollbar { height: 9px; }
+.quadro::-webkit-scrollbar-track { background: transparent; }
+.quadro::-webkit-scrollbar-thumb {
+  background: var(--linha);
+  border-radius: 99px;
+}
+.quadro::-webkit-scrollbar-thumb:hover { background: var(--linha-viva); }
+
+@media (max-width: 760px) {
+  /* Telefone: largura fixa e rolagem horizontal mesmo. Cinco colunas
+     comprimidas em 360px não são um quadro, são uma lista ruim. */
+  .quadro { grid-template-columns: repeat(5, 76vw); }
+}
+
+/* ---------------------------------------------------------- coluna */
+
+.coluna {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  scroll-snap-align: start;
+  transition: border-color .16s var(--mola), background .16s var(--mola);
+}
+/* Arquivo recua mais para o fundo. */
+.coluna[data-terminal="sim"] { background: color-mix(in oklab, var(--painel) 62%, var(--vazio)); }
+
+/* Durante um arraste, toda coluna que pode receber se anuncia. */
+.coluna[data-alvo="sim"] { border-color: var(--linha-viva); border-style: dashed; }
+.coluna[data-sobre="sim"] {
+  border-style: solid;
+  border-color: var(--voce);
+  background: color-mix(in oklab, var(--voce) 8%, var(--painel));
+}
+
+.cabeca {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 9px 10px 8px;
+  border-bottom: 1px solid var(--linha);
+}
+
+.nomeColuna {
+  margin-right: auto;
+  min-width: 0;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conta {
+  flex-shrink: 0;
+  min-width: 23px;
+  padding: 0 6px;
+  text-align: center;
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--tinta);
+  background: var(--alto);
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+}
+
+.frios {
+  flex-shrink: 0;
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+  font-size: 9.5px;
+  letter-spacing: .04em;
+  color: var(--erro);
+  padding: 0 5px;
+  border: 1px solid color-mix(in oklab, var(--erro) 40%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--erro) 12%, transparent);
+  white-space: nowrap;
+}
+
+.pilha {
+  list-style: none;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--linha) transparent;
+}
+.pilha::-webkit-scrollbar { width: 8px; }
+.pilha::-webkit-scrollbar-track { background: transparent; }
+.pilha::-webkit-scrollbar-thumb { background: var(--linha); border-radius: 99px; }
+.pilha::-webkit-scrollbar-thumb:hover { background: var(--linha-viva); }
+
+.vazia {
+  list-style: none;
+  padding: 15px 8px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: var(--tinta-fantasma);
+  border: 1px dashed var(--linha);
+  border-radius: var(--raio-p);
+}

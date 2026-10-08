@@ -1,0 +1,57 @@
+.faixa {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 46px;
+  padding: 0 20px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--linha);
+  background: var(--vazio);
+}
+
+.rastro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(90deg, #000 88%, transparent);
+}
+
+.item {
+  font-size: 12.5px;
+  color: var(--tinta-fantasma);
+  text-transform: lowercase;
+  flex-shrink: 0;
+  transition: color .3s var(--mola);
+}
+/* Separador entre os itens, sem virar caractere no meio do texto. */
+.item + .item::before {
+  content: "·";
+  margin-right: 12px;
+  color: var(--linha-viva);
+}
+/* O último a aparecer é o único com alguma luz. */
+.agora { color: var(--tinta-fraca); }
+
+.nada { font-size: 12.5px; color: var(--linha-viva); }
+
+.medidas {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+}
+/* :global porque .telemetria mora em globals.css — sem isso o CSS Module
+   renomeia a classe e a regra nunca casa com nada. */
+.medidas :global(.telemetria) { color: var(--tinta-fantasma); font-size: 11.5px; }
+.modelo { color: var(--linha-viva) !important; }
+
+@media (max-width: 860px) {
+  .medidas :global(.telemetria):nth-child(3), .modelo { display: none; }
+}
+@media (max-width: 720px) {
+  .faixa { padding: 0 14px; gap: 12px; }
+}
