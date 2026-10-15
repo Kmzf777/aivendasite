@@ -1,0 +1,11 @@
+.casco {
+  display: grid;
+  grid-template-columns: 236px 1fr;
+  min-height: 100dvh;
+}
+
+.conteudo { min-width: 0; overflow-x: hidden; }
+
+@media (max-width: 860px) {
+  .casco { grid-template-columns: 64px 1fr; }
+}

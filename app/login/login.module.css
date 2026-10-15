@@ -1,0 +1,237 @@
+/* ==================================================================
+   Login = placa + console.
+   A esquerda é a placa da Vistra: marca, frase e o estado real do
+   sistema. A direita é o console, e o console tem UM controle.
+   A costura verde entre as duas é a única coisa acesa da tela.
+   ================================================================== */
+
+.tela {
+  min-height: 100dvh;
+  display: grid;
+  /* O console tem largura de console: não cresce com a janela. */
+  grid-template-columns: minmax(0, 1fr) clamp(380px, 38vw, 540px);
+}
+
+/* ---------- placa ---------- */
+
+.placa {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 48px;
+  min-width: 0;
+  padding: 54px 56px 46px;
+  border-right: 1px solid var(--linha);
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.marca svg {
+  flex-shrink: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 22px rgba(57,255,20,.25);
+}
+.marca h1 {
+  font-family: var(--fonte-serif), sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -.02em;
+}
+.marca b { color: var(--voce); font-weight: 800; }
+.marca span {
+  font-family: var(--fonte-ui), sans-serif;
+  color: var(--tinta-fantasma);
+  font-weight: 600;
+  font-size: .6em;
+  letter-spacing: .14em;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.lema {
+  margin-top: 22px;
+  max-width: 18ch;
+  font-family: var(--fonte-serif), sans-serif;
+  font-size: clamp(34px, 4.4vw, 56px);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -.03em;
+  color: var(--tinta);
+}
+
+.base { display: flex; flex-direction: column; gap: 22px; }
+
+.estado { display: flex; align-items: center; gap: 9px; }
+.luz { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.acesa   { background: var(--ok);   box-shadow: 0 0 9px var(--ok); }
+.apagada { background: var(--erro); box-shadow: 0 0 9px var(--erro); }
+
+/* Ficha técnica: o que a sessão é, em três linhas. Não é decoração — é a
+   resposta para "o que acontece quando eu entro". */
+.ficha {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 8px 20px;
+  align-items: baseline;
+  padding-top: 20px;
+  border-top: 1px solid var(--linha);
+  max-width: 46ch;
+}
+.ficha dt { padding-top: 2px; }
+.ficha dd { font-size: 13.5px; color: var(--tinta-fraca); }
+
+/* ---------- console ---------- */
+
+.console {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 54px 46px;
+  background: var(--painel);
+}
+/* A costura acesa. Mesma gramática do fio de luz que marca a porta atual no
+   menu: aqui ela diz que o controle vivo da tela está deste lado. */
+.console::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 12%;
+  bottom: 12%;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, var(--voce), transparent);
+  box-shadow: 0 0 12px rgba(57,255,20,.45);
+  opacity: .7;
+}
+
+.bloco { display: flex; flex-direction: column; gap: 20px; }
+
+.forma { display: flex; flex-direction: column; gap: 17px; }
+.linha { display: flex; flex-direction: column; gap: 7px; }
+
+.senha { position: relative; }
+.senha input { padding-right: 82px; }
+
+.olho {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: color .16s var(--mola), border-color .16s var(--mola);
+}
+.olho:hover:not(:disabled) { color: var(--tinta); border-color: var(--linha-viva); }
+.olho:disabled { opacity: .4; cursor: not-allowed; }
+
+.entrar {
+  width: 100%;
+  margin-top: 3px;
+  padding: 13px 18px;
+  background: var(--voce);
+  border-color: var(--voce);
+  color: var(--sobre-voce);
+  font-weight: 700;
+}
+
+/* ---------- recados ---------- */
+
+.erro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px 14px;
+  border-radius: var(--raio-p);
+  background: color-mix(in oklab, var(--erro) 13%, var(--vazio));
+  border: 1px solid color-mix(in oklab, var(--erro) 42%, transparent);
+  color: color-mix(in oklab, var(--erro) 35%, var(--tinta));
+  font-size: 13.5px;
+}
+/* O código cru do Supabase, só quando a gente não soube traduzir. */
+.pista {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 11.5px;
+  color: var(--tinta-fraca);
+  background: rgba(0, 0, 0, .3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+/* Configuração faltando não é falha: é aviso. Daí o amarelo do sinal. */
+.aviso {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 13px 15px;
+  border-radius: var(--raio-p);
+  background: color-mix(in oklab, var(--sinal) 10%, var(--vazio));
+  border: 1px solid color-mix(in oklab, var(--sinal) 38%, transparent);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.aviso strong { font-size: 13.5px; color: var(--sinal); font-weight: 650; }
+.aviso p { color: var(--tinta-fraca); }
+
+.nota {
+  padding: 11px 14px;
+  border-radius: var(--raio-p);
+  background: color-mix(in oklab, var(--voce) 11%, var(--vazio));
+  border: 1px solid color-mix(in oklab, var(--voce) 34%, transparent);
+  font-size: 13px;
+  color: var(--tinta-fraca);
+}
+
+.aviso code,
+.nota code,
+.rodape code {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 11.5px;
+  color: var(--tinta);
+  background: rgba(0, 0, 0, .32);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.rodape {
+  padding-top: 18px;
+  border-top: 1px solid var(--linha);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--tinta-fantasma);
+}
+.rodape em { font-style: normal; color: var(--tinta-fraca); }
+
+/* ---------- estreito: a placa vira cabeçalho ---------- */
+
+@media (max-width: 900px) {
+  .tela { grid-template-columns: 1fr; }
+  .placa {
+    gap: 26px;
+    padding: 34px 26px 28px;
+    border-right: none;
+    border-bottom: 1px solid var(--linha);
+  }
+  .marca h1 { font-size: 22px; }
+  .lema { margin-top: 16px; font-size: 30px; }
+  /* A ficha técnica é contexto, não instrução: no celular ela sai da frente
+     do único controle da tela. */
+  .ficha { display: none; }
+  .console { padding: 30px 26px 44px; justify-content: flex-start; }
+  .console::before { display: none; }
+}

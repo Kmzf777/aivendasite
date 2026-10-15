@@ -2,6 +2,14 @@
 //
 //   node scripts/importar-leads.js            (confere e mostra o que faria)
 //   node scripts/importar-leads.js --gravar   (grava de verdade)
+//   node scripts/importar-leads.js --arquivo ../prospeccao/leads/uberlandia/leads.json --gravar
+//   node scripts/importar-leads.js --ate 2 --gravar   (só prioridade 1 e 2)
+//
+// O padrão é prospeccao/leads/uberlandia/leads.json (raspagem de site +
+// CRM) quando ele existe, senão o leads/raw.json antigo dos pet shops. O
+// script mora em crm/scripts, por isso são três níveis até a raiz.
+// As chaves vêm do crm/.env.local, o mesmo arquivo que o Next lê. Os campos email,
+// nicho, gancho e prioridade exigem supabase/migracao-003-raspagem.sql.
 //
 // Usa a service_role key: ela IGNORA o RLS, que é o que permite semear a
 // tabela sem um usuário logado. Por isso roda só aqui, nunca no navegador.
@@ -12,11 +20,16 @@
 const fs = require("fs");
 const path = require("path");
 
-const RAIZ = path.join(__dirname, "..");
-const ARQ_LEADS = path.join(RAIZ, "..", "leads", "raw.json");
+function arquivoLeads() {
+  const i = process.argv.indexOf("--arquivo");
+  if (i > -1 && process.argv[i + 1]) return path.resolve(process.argv[i + 1]);
+  const novo = path.join(__dirname, "..", "..", "prospeccao", "leads", "uberlandia", "leads.json");
+  return fs.existsSync(novo) ? novo : path.join(__dirname, "..", "..", "prospeccao", "leads", "raw.json");
+}
+const ARQ_LEADS = arquivoLeads();
 
 function env() {
-  const arq = path.join(RAIZ, ".env");
+  const arq = path.join(__dirname, "..", ".env.local");
   const txt = fs.existsSync(arq) ? fs.readFileSync(arq, "utf8") : "";
   const pegar = (k) => {
     const m = txt.match(new RegExp("^\\s*" + k + "\\s*=\\s*(.+)$", "m"));
@@ -45,7 +58,15 @@ function texto(v) {
 }
 
 function converter(cru) {
+  // Campos da migracao-003 só entram se vierem no arquivo: o raw.json antigo
+  // não os tem, e mandar a coluna num banco sem a migração dá HTTP 400.
+  const extra = {};
+  if (cru.email !== undefined) extra.email = texto(cru.email);
+  if (cru.nicho !== undefined) extra.nicho = texto(cru.nicho);
+  if (cru.gancho !== undefined) extra.gancho = texto(cru.gancho);
+  if (cru.prioridade !== undefined) extra.prioridade = inteiro(cru.prioridade);
   return {
+    ...extra,
     nome: texto(cru.nome),
     categoria: texto(cru.cat),
     telefone: texto(cru.tel),
@@ -90,7 +111,14 @@ async function api(cfg, caminho, opcoes = {}) {
   }
 
   const crus = JSON.parse(fs.readFileSync(ARQ_LEADS, "utf8"));
-  const convertidos = crus.map(converter).filter((l) => l.nome);
+  // --ate 2 = só prioridade 1 e 2. A raspagem tem mais de mil linhas e a
+  // lista é da equipe inteira: entra primeiro o que vale o contato.
+  const iAte = process.argv.indexOf("--ate");
+  const ate = iAte > -1 ? Number(process.argv[iAte + 1]) : Infinity;
+  const convertidos = crus
+    .filter((c) => c.prioridade == null || c.prioridade <= ate)
+    .map(converter)
+    .filter((l) => l.nome);
 
   console.log("\n  " + crus.length + " no arquivo · " + convertidos.length + " com nome");
 
@@ -102,6 +130,28 @@ async function api(cfg, caminho, opcoes = {}) {
     console.error("\n  Não consegui ler a tabela leads: " + e.message);
     console.error("  Rode supabase/schema.sql no SQL Editor do Supabase antes.\n");
     process.exit(1);
+  }
+
+  // Campos da raspagem (email, nicho, gancho, prioridade) precisam da
+  // migracao-003. Sem ela o POST inteiro dá 400; melhor parar e dizer o porquê.
+  const temExtras = convertidos.some((l) => "nicho" in l);
+  if (temExtras) {
+    try {
+      await api(cfg, "leads?select=nicho,gancho,prioridade,email&limit=1");
+    } catch (e) {
+      if (!process.argv.includes("--sem-extras")) {
+        console.error("\n  O banco não tem as colunas da raspagem (nicho, gancho, prioridade, email).");
+        console.error("  Rode supabase/migracao-003-raspagem.sql no SQL Editor do Supabase,");
+        console.error("  ou rode com --sem-extras para importar só os campos básicos.\n");
+        process.exit(1);
+      }
+      convertidos.forEach((l) => {
+        delete l.email;
+        delete l.nicho;
+        delete l.gancho;
+        delete l.prioridade;
+      });
+    }
   }
 
   const jaTem = new Set(existentes.map((l) => (l.nome || "") + "|" + (l.telefone || "")));

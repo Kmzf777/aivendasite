@@ -1,0 +1,165 @@
+/* ===================================================================
+   O placar da equipe.
+   Substitui a hero de quatro cartões e três parágrafos. A tela abre com
+   UMA pergunta respondida — quanto ainda está livre — e com quem está
+   produzindo. Texto explicativo não gamifica nada.
+   =================================================================== */
+
+.placar { display: flex; flex-direction: column; gap: 14px; }
+
+/* ---------- a barra ---------- */
+.barra {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+}
+
+.fatia {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  /* Sem largura mínima: fatia de zero tem que sumir de verdade, senão a
+     barra mente sobre a proporção. */
+  min-width: 0;
+  transition: filter .18s var(--mola), opacity .18s var(--mola);
+}
+.fatia:hover { filter: brightness(1.25); }
+.fatia[data-ativo="true"] { filter: brightness(1.35); }
+
+.fatia[data-tom="livre"] { background: var(--sinal); }
+.fatia[data-tom="meu"]   { background: var(--voce); }
+.fatia[data-tom="outro"] { background: var(--linha-viva); }
+
+/* ---------- legenda ---------- */
+.legenda { display: flex; gap: 18px; flex-wrap: wrap; }
+
+.marcador {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--tinta-fantasma);
+  transition: color .16s var(--mola);
+}
+.marcador:hover { color: var(--tinta-fraca); }
+.marcador strong {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.marcador[data-tom="livre"] strong { color: var(--sinal); }
+.marcador[data-tom="meu"] strong   { color: var(--voce); }
+.marcador[data-tom="outro"] strong { color: var(--tinta-fraca); }
+
+/* ---------- vendedores ---------- */
+.vendedores {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  transition: border-color .18s var(--mola);
+}
+.cartao:hover { border-color: var(--linha-viva); }
+
+/* O seu cartão carrega o fio de luz: achar a si mesmo num placar tem que
+   ser instantâneo, senão ele não motiva ninguém. */
+.cartao[data-eu="true"] {
+  border-color: color-mix(in oklab, var(--voce) 42%, var(--linha));
+  background: color-mix(in oklab, var(--voce) 7%, var(--painel));
+}
+
+.quem { display: flex; align-items: center; gap: 9px; min-width: 0; }
+
+.inicial {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  background: var(--alto);
+  border: 1px solid var(--linha-viva);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--tinta-fraca);
+}
+.cartao[data-eu="true"] .inicial {
+  background: var(--voce);
+  border-color: var(--voce);
+  color: var(--sobre-voce);
+}
+
+.nome {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--tinta);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nome em {
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--voce);
+}
+
+/* O funil: números cumulativos, cada etapa subconjunto da anterior.
+   As setas não são enfeite — são o que impede a leitura de "três baldes
+   separados", que foi o erro da primeira versão. */
+.funil { list-style: none; display: flex; align-items: flex-end; gap: 9px; }
+
+.etapa { display: flex; flex-direction: column; line-height: 1.1; }
+.etapa strong {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 21px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-fraca);
+}
+.etapa em {
+  font-style: normal;
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+  margin-top: 3px;
+}
+
+/* Fechou é o desfecho e ganha a cor forte e o corpo maior. */
+.etapa[data-tom="ok"] strong    { color: var(--tinta); }
+.etapa[data-tom="ganho"] strong { color: var(--ok); font-size: 25px; }
+
+.seta {
+  font-size: 15px;
+  line-height: 1;
+  color: var(--tinta-fantasma);
+  padding-bottom: 13px;
+  opacity: .55;
+}
+
+@media (max-width: 560px) {
+  .vendedores { grid-template-columns: 1fr; }
+}

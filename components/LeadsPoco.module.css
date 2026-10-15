@@ -1,0 +1,266 @@
+.tela {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 44px 28px 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* ------------------------------------------------ aviso de demonstração */
+.demo {
+  font-size: 13.5px;
+  color: color-mix(in oklab, var(--sinal) 35%, var(--tinta));
+  padding: 13px 16px;
+  background: color-mix(in oklab, var(--sinal) 11%, var(--vazio));
+  border: 1px solid color-mix(in oklab, var(--sinal) 40%, transparent);
+  border-left: 3px solid var(--sinal);
+  border-radius: var(--raio-p);
+}
+.demo strong { color: var(--sinal); font-weight: 700; }
+.demo code {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--tinta);
+}
+
+/* ------------------------------------------------ topo */
+.topo {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cabeca {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.cabeca > button { margin-left: auto; }
+
+.titulo {
+  margin-top: 4px;
+  font-family: var(--fonte-serif), sans-serif;
+  font-weight: 800;
+  font-size: 38px;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+}
+
+.lema {
+  margin-top: 8px;
+  max-width: 54ch;
+  font-size: 14px;
+  color: var(--tinta-fraca);
+}
+.lema em { font-style: italic; color: var(--tinta); }
+
+/* ------------------------------------------------ placar/filtro */
+.placar {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 860px) {
+  .placar { grid-template-columns: 1fr 1fr; }
+}
+
+.ficha {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  font: inherit;
+  padding: 16px 18px 18px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  cursor: pointer;
+  transition: border-color 0.18s var(--mola), background 0.18s var(--mola),
+    transform 0.18s var(--mola);
+}
+.ficha:hover { background: var(--alto); transform: translateY(-1px); }
+
+.ficha strong {
+  font-family: var(--fonte-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--tinta);
+}
+.ficha em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--tinta-fantasma);
+}
+
+/* A ficha "sem dono" é maior porque é a pergunta da tela: quanta coisa
+   ainda está esperando alguém ligar. */
+.ficha[data-grande="true"] strong { font-size: 54px; }
+.ficha[data-grande="true"][data-tom="sinal"] strong { color: var(--sinal); }
+
+.ficha[data-tom="sinal"]:hover { border-color: color-mix(in oklab, var(--sinal) 50%, var(--linha)); }
+.ficha[data-tom="voce"]:hover { border-color: color-mix(in oklab, var(--voce) 50%, var(--linha)); }
+.ficha[data-tom="ok"]:hover { border-color: color-mix(in oklab, var(--ok) 50%, var(--linha)); }
+
+/* O filtro ativo não é um estado sutil: a lista mostra menos do que existe,
+   e isso tem que estar explicado na própria ficha. */
+.ficha[data-ativo="true"] { background: var(--alto); }
+.ficha[data-ativo="true"][data-tom="sinal"] {
+  border-color: var(--sinal);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--sinal) 30%, transparent);
+}
+.ficha[data-ativo="true"][data-tom="voce"] { border-color: var(--voce); box-shadow: 0 0 18px rgba(57,255,20,.14); }
+.ficha[data-ativo="true"][data-tom="ok"] { border-color: var(--ok); }
+.ficha[data-ativo="true"][data-tom="neutro"] { border-color: var(--tinta-fantasma); }
+
+/* ------------------------------------------------ régua */
+.regua {
+  display: flex;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--linha);
+}
+.fatia { height: 100%; transition: width 0.4s var(--mola); }
+.fatia[data-tom="sinal"] { background: var(--sinal); }
+.fatia[data-tom="voce"] { background: var(--voce); }
+.fatia[data-tom="outro"] { background: var(--linha-viva); }
+
+.legenda { margin-top: -8px; }
+
+/* ------------------------------------------------ controles */
+.controles {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.busca { max-width: 360px; }
+
+.ordenar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.chip {
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--tinta-fraca);
+  background: transparent;
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: color 0.16s var(--mola), border-color 0.16s var(--mola),
+    background 0.16s var(--mola);
+}
+.chip:hover { color: var(--tinta); border-color: var(--linha-viva); }
+.chip[data-ativo="true"] {
+  color: var(--tinta);
+  background: var(--alto);
+  border-color: var(--tinta-fantasma);
+}
+
+/* ------------------------------------------------ lista */
+.lista {
+  overflow: hidden;
+}
+
+.cabecalhoLista {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px 92px 150px auto;
+  gap: 16px;
+  padding: 10px 18px 10px 20px;
+  background: var(--vazio);
+  border-bottom: 1px solid var(--linha);
+}
+.cabecalhoLista > span:last-child { min-width: 120px; }
+
+@media (max-width: 1180px) {
+  .cabecalhoLista { grid-template-columns: minmax(0, 1fr) 120px 150px auto; }
+  .cabecalhoLista > span:nth-child(3) { display: none; }
+}
+@media (max-width: 900px) {
+  .cabecalhoLista { display: none; }
+}
+
+.linhas { list-style: none; }
+
+.vazio {
+  padding: 54px 24px;
+  text-align: center;
+  font-family: var(--fonte-serif), sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  color: var(--tinta-fraca);
+}
+
+.rodape {
+  padding: 10px 20px 12px;
+  border-top: 1px solid var(--linha);
+  background: var(--vazio);
+}
+
+/* ------------------------------------------------ aviso de ação */
+.aviso {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 70;
+  max-width: 420px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 14px 13px 16px;
+  border-radius: var(--raio-p);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  animation: entrar 0.2s var(--mola);
+  font-size: 13.5px;
+}
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.aviso[data-tom="ok"] {
+  background: color-mix(in oklab, var(--ok) 14%, var(--painel));
+  border: 1px solid color-mix(in oklab, var(--ok) 45%, transparent);
+  color: color-mix(in oklab, var(--ok) 35%, var(--tinta));
+}
+.aviso[data-tom="erro"] {
+  background: color-mix(in oklab, var(--erro) 14%, var(--painel));
+  border: 1px solid color-mix(in oklab, var(--erro) 48%, transparent);
+  color: color-mix(in oklab, var(--erro) 35%, var(--tinta));
+}
+.aviso p { min-width: 0; }
+.aviso button {
+  margin-left: auto;
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.6;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 3px;
+}
+.aviso button:hover { opacity: 1; }
+
+@media (max-width: 640px) {
+  .tela { padding: 28px 16px 60px; }
+  .titulo { font-size: 38px; }
+  .ficha[data-grande="true"] strong { font-size: 40px; }
+  .aviso { left: 14px; right: 14px; bottom: 14px; max-width: none; }
+}

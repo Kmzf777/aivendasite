@@ -1,0 +1,313 @@
+.painel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  background: var(--painel);
+  border: 1px solid var(--linha-viva);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+.painel:focus { outline: none; }
+
+/* ---------------------------------------------------------- topo */
+
+.topo {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--linha);
+  background: var(--alto);
+}
+
+.identidade { min-width: 0; }
+
+.etapaAtual {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--voce);
+  padding: 2px 7px;
+  margin-bottom: 7px;
+  border: 1px solid color-mix(in oklab, var(--voce) 40%, transparent);
+  background: color-mix(in oklab, var(--voce) 12%, transparent);
+  border-radius: 999px;
+}
+.etapaAtual[data-terminal="sim"] {
+  color: var(--tinta-fraca);
+  border-color: var(--linha-viva);
+  background: transparent;
+}
+
+.nome {
+  font-family: var(--fonte-serif), sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+}
+
+.categoria {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+}
+
+.fechar {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: var(--tinta-fraca);
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color .14s var(--mola), border-color .14s var(--mola);
+}
+.fechar:hover { color: var(--tinta); border-color: var(--linha-viva); }
+
+/* ---------------------------------------------------------- corpo */
+
+.rolo {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 16px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--linha) transparent;
+}
+.rolo::-webkit-scrollbar { width: 8px; }
+.rolo::-webkit-scrollbar-track { background: transparent; }
+.rolo::-webkit-scrollbar-thumb { background: var(--linha); border-radius: 99px; }
+
+.bloco {
+  padding: 15px 0;
+  border-bottom: 1px solid var(--linha);
+}
+.bloco:last-child { border-bottom: 0; }
+
+.rotulo {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+  margin-bottom: 9px;
+}
+.rotulo span { letter-spacing: .06em; }
+
+/* ---------------------------------------------------------- etapas */
+
+/* As cinco etapas como trilha: dá para pular direto para 'Perdeu' sem
+   clicar quatro vezes na seta, e é tudo <button> — teclado funciona. */
+.trilha {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 5px;
+}
+
+.etapaBotao {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--tinta-fraca);
+  background: var(--vazio);
+  border: 1px solid var(--linha);
+  border-radius: 7px;
+  padding: 7px 4px;
+  cursor: pointer;
+  transition: color .14s var(--mola), border-color .14s var(--mola), background .14s var(--mola);
+}
+.etapaBotao:hover:not([aria-disabled="true"]) {
+  color: var(--tinta);
+  border-color: var(--linha-viva);
+  background: var(--alto);
+}
+.etapaBotao[data-aqui="sim"] {
+  color: var(--tinta);
+  border-color: var(--voce);
+  background: color-mix(in oklab, var(--voce) 16%, transparent);
+  opacity: 1;
+  cursor: default;
+}
+/* Indisponível porque há gravação em voo — não porque é a etapa atual. */
+.etapaBotao[aria-disabled="true"][data-aqui="nao"] { opacity: .35; cursor: progress; }
+
+/* ---------------------------------------------------------- tabelas */
+
+.tabela { display: flex; flex-direction: column; gap: 7px; }
+.tabela > div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.tabela dt {
+  flex-shrink: 0;
+  width: 118px;
+  font-size: 11.5px;
+  color: var(--tinta-fantasma);
+}
+.tabela dd {
+  min-width: 0;
+  font-size: 13px;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+.tabela dd a { color: var(--voce); text-decoration: none; }
+.tabela dd a:hover { text-decoration: underline; }
+
+.destaque {
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.tabela > div[data-temp="atencao"] .destaque { color: var(--sinal); }
+.tabela > div[data-temp="frio"] .destaque { color: var(--erro); font-weight: 600; }
+
+/* ---------------------------------------------------------- contatos */
+
+.contatos {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.contatos li {
+  padding: 9px 11px;
+  background: var(--alto);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-p);
+}
+
+.contatoNome {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+}
+.contatoNome strong { font-weight: 650; }
+
+.selo {
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ok);
+  border: 1px solid color-mix(in oklab, var(--ok) 42%, transparent);
+  background: color-mix(in oklab, var(--ok) 13%, transparent);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.cargo {
+  font-size: 11px;
+  color: var(--tinta-fraca);
+  margin-top: 1px;
+}
+
+.telefone {
+  display: inline-block;
+  margin-top: 5px;
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  letter-spacing: -.01em;
+  color: var(--tinta);
+  text-decoration: none;
+  padding: 2px 7px;
+  margin-left: -7px;
+  border-radius: 6px;
+  transition: color .14s var(--mola), background .14s var(--mola);
+}
+.telefone:hover {
+  color: var(--voce);
+  background: color-mix(in oklab, var(--voce) 14%, transparent);
+}
+
+/* ---------------------------------------------------------- anotar */
+
+.anotacao {
+  resize: vertical;
+  min-height: 68px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.acoes {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 9px;
+  flex-wrap: wrap;
+}
+.acoes .demo, .demo {
+  font-size: 11px;
+  color: var(--sinal);
+}
+
+/* ---------------------------------------------------------- histórico */
+
+.historico {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  /* Fio vertical: a linha do tempo tem que parecer uma linha. */
+  border-left: 1px solid var(--linha);
+  margin-left: 3px;
+  padding-left: 13px;
+}
+.historico li { position: relative; padding: 7px 0; }
+.historico li::before {
+  content: "";
+  position: absolute;
+  left: -17px;
+  top: 13px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--linha-viva);
+  border: 2px solid var(--painel);
+}
+.historico li:first-child::before { background: var(--voce); }
+
+.linhaEvento {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+.tipo {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
+.data {
+  margin-left: auto;
+  font-family: var(--fonte-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 10.5px;
+  color: var(--tinta-fantasma);
+  white-space: nowrap;
+}
+.notaEvento {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--tinta);
+  margin-top: 2px;
+}
+
+.nada, .furo {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--tinta-fraca);
+}
+.furo { color: color-mix(in oklab, var(--erro) 60%, var(--tinta)); }

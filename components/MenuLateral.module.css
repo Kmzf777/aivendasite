@@ -1,0 +1,102 @@
+.menu {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 22px 14px 18px;
+  background: var(--painel);
+  border-right: 1px solid var(--linha);
+  overflow: hidden;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 20px;
+  text-decoration: none;
+  color: var(--tinta);
+}
+.simbolo {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgba(57,255,20,.22);
+}
+.nomeMarca {
+  display: block;
+  white-space: nowrap;
+  font-family: var(--fonte-serif), sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.05;
+}
+.nomeMarca b { color: var(--voce); font-weight: 800; }
+.nomeMarca small {
+  font-family: var(--fonte-ui), sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  color: var(--tinta-fantasma);
+  display: block;
+  margin-top: 3px;
+}
+
+.portas { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+
+.porta {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 10px;
+  border-radius: var(--raio-p);
+  text-decoration: none;
+  color: var(--tinta-fraca);
+  border: 1px solid transparent;
+  transition: background .16s var(--mola), color .16s var(--mola), border-color .16s var(--mola);
+}
+.porta:hover { background: var(--alto); color: var(--tinta); }
+
+/* A porta atual carrega o fio de luz verde, com um glow discreto. */
+.aqui {
+  background: var(--alto);
+  border-color: var(--linha);
+  color: var(--tinta);
+  position: relative;
+}
+.aqui::before {
+  content: "";
+  position: absolute;
+  left: -1px; top: 9px; bottom: 9px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--voce);
+  box-shadow: 0 0 10px rgba(57,255,20,.6);
+}
+.aqui .glifo { color: var(--voce); opacity: 1; }
+
+.glifo { font-size: 14px; width: 17px; text-align: center; flex-shrink: 0; opacity: .85; }
+
+.texto { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.texto strong { font-size: 14px; font-weight: 600; }
+.texto em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--tinta-fantasma);
+  letter-spacing: .02em;
+}
+
+.pe { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--linha); }
+
+/* Estreito: só o símbolo e os glifos, para não roubar largura do conteúdo. */
+@media (max-width: 860px) {
+  .menu { padding: 20px 8px; align-items: center; }
+  .marca { padding: 0 0 16px; justify-content: center; }
+  .nomeMarca { display: none; }
+  .texto { display: none; }
+  .porta { justify-content: center; padding: 11px 0; width: 44px; }
+}

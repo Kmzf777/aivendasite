@@ -1,0 +1,340 @@
+/* ==================================================================
+   Uma linha do poço. São 117, então a densidade manda: altura curta,
+   separador de um pixel, nada de sombra ou card por linha.
+
+   A única exceção é a faixa da esquerda. Ela é a leitura periférica da
+   tela: âmbar = ninguém pegou ainda (é trabalho esperando), azul = é seu,
+   verde = tem o contato de quem decide, apagado = já foi descartado.
+   ================================================================== */
+
+.linha {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px 92px 150px auto;
+  align-items: center;
+  gap: 16px;
+  padding: 11px 18px 11px 20px;
+  border-bottom: 1px solid var(--linha);
+  transition: background 0.16s var(--mola);
+}
+.linha:last-child { border-bottom: none; }
+.linha:hover { background: var(--alto); }
+
+.linha::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.2s var(--mola);
+}
+/* Sem dono é o estado que a tela quer que você resolva. É o único que
+   acende sozinho, e acende em âmbar, que é a cor do "falta algo". */
+.linha[data-sem-dono="true"]::before { background: var(--sinal); }
+.linha[data-situacao="meu"][data-sem-dono="false"]::before { background: var(--voce); }
+.linha[data-situacao="qualificado"]::before { background: var(--ok); }
+.linha[data-situacao="nao_qualificado"]::before { background: var(--linha-viva); }
+
+/* Descartado recua: continua na lista para ninguém reabrir a mesma porta,
+   mas não compete com o que ainda dá dinheiro. */
+.linha[data-situacao="nao_qualificado"] .quem,
+.linha[data-situacao="nao_qualificado"] .telefone,
+.linha[data-situacao="nao_qualificado"] .reputacao {
+  opacity: 0.55;
+}
+
+/* ------------------------------------------------ identidade */
+.quem {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nomeLinha {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nome {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--tinta);
+}
+
+.contexto {
+  display: flex;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--tinta-fantasma);
+  min-width: 0;
+}
+.contexto > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.endereco { max-width: 34ch; }
+
+.selo {
+  flex-shrink: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+  border: 1px solid var(--linha-viva);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+.selo[data-cor="sinal"] {
+  color: var(--sinal);
+  border-color: color-mix(in oklab, var(--sinal) 40%, transparent);
+}
+.selo[data-cor="erro"] {
+  color: var(--erro);
+  border-color: color-mix(in oklab, var(--erro) 45%, transparent);
+}
+.selo[data-cor="ok"] {
+  color: var(--ok);
+  border-color: color-mix(in oklab, var(--ok) 42%, transparent);
+}
+
+/* O contato de quem decide: o ativo. Fundo próprio, para ler como troféu
+   e não como mais um campo. */
+.decisor {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+  padding: 5px 10px;
+  background: color-mix(in oklab, var(--ok) 9%, var(--vazio));
+  border: 1px solid color-mix(in oklab, var(--ok) 26%, transparent);
+  border-radius: var(--raio-p);
+  font-size: 13px;
+  width: fit-content;
+  max-width: 100%;
+}
+.decisor strong { font-weight: 650; color: var(--tinta); }
+.decisor em { font-style: normal; color: var(--tinta-fraca); font-size: 12px; }
+.decisor code {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 12.5px;
+  color: var(--ok);
+}
+
+.motivo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--tinta-fraca);
+}
+
+/* ------------------------------------------------ telefone */
+.telefone {
+  font-family: var(--fonte-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
+.telefone a {
+  color: var(--tinta-fraca);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.16s var(--mola), border-color 0.16s var(--mola);
+}
+.telefone a:hover { color: var(--voce); border-bottom-color: var(--voce); }
+
+.nada {
+  font-family: var(--fonte-ui), sans-serif;
+  font-size: 11.5px;
+  color: var(--tinta-fantasma);
+  font-style: italic;
+}
+
+/* ------------------------------------------------ reputação */
+.reputacao {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.reputacao strong {
+  font-family: var(--fonte-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+.reputacao strong span { color: var(--sinal); font-size: 11px; }
+.reputacao em {
+  font-style: normal;
+  font-family: var(--fonte-mono), monospace;
+  font-size: 11px;
+  color: var(--tinta-fantasma);
+}
+
+/* ------------------------------------------------ dono */
+.dono {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  min-width: 0;
+}
+
+/* O buraco. Tracejado porque é um encaixe vazio, não um valor "nenhum". */
+.vago {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--sinal) 80%, var(--tinta-fantasma));
+  border: 1px dashed color-mix(in oklab, var(--sinal) 38%, transparent);
+  border-radius: var(--raio-p);
+  padding: 3px 10px;
+  white-space: nowrap;
+  transition: color 0.18s var(--mola), border-color 0.18s var(--mola),
+    background 0.18s var(--mola);
+}
+.linha:hover .vago {
+  color: var(--sinal);
+  border-color: var(--sinal);
+  background: color-mix(in oklab, var(--sinal) 12%, transparent);
+}
+
+.comDono {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--tinta-fraca);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.comDono[data-eu="true"] { color: var(--voce); font-weight: 600; }
+
+.inicial {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--tinta);
+  background: var(--linha-viva);
+}
+.comDono[data-eu="true"] .inicial {
+  background: color-mix(in oklab, var(--voce) 30%, var(--linha-viva));
+  color: var(--tinta);
+}
+
+/* ------------------------------------------------ ações */
+.acoes {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
+.acao {
+  font-size: 12.5px;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+.acaoOk:hover:not(:disabled) {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.acaoFraca { background: transparent; color: var(--tinta-fraca); }
+.acaoFraca:hover:not(:disabled) { color: var(--tinta); }
+
+.ocupadoPor {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tinta-fantasma);
+  padding-right: 4px;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------ estreito */
+@media (max-width: 1180px) {
+  .linha { grid-template-columns: minmax(0, 1fr) 120px 150px auto; }
+  .reputacao { display: none; }
+}
+
+@media (max-width: 900px) {
+  .linha {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    row-gap: 8px;
+    padding: 13px 14px 13px 18px;
+  }
+  .telefone { grid-column: 1; }
+  .dono { grid-column: 1; }
+  .acoes { grid-column: 2; grid-row: 1 / span 3; flex-direction: column; align-items: flex-end; }
+}
+
+/* ------------------------------------------------------------------
+   Lead já pego, visto da lista universal.
+   Vira informação, não trabalho: apaga e risca. O que sobra aceso na
+   tela é o que ainda está livre - que é o ponto da lista.
+   Não se aplica em "meus leads": lá tudo é seu e tudo é trabalho.
+   ------------------------------------------------------------------ */
+.riscado { opacity: .42; }
+.riscado:hover { opacity: .62; }
+
+/* Risca só o NOME. Riscar a linha inteira tornaria o telefone e o nome de
+   quem pegou ilegíveis - e são justamente os dois dados que ainda
+   interessam num lead que não é seu. */
+.riscado .nome {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--tinta-fantasma);
+}
+
+/* ------------------------------------------------ raspagem
+   Nicho, links e gancho só existem nos leads raspados para venda de
+   site + CRM. Lead sem eles fica idêntico ao que era. */
+.nicho {
+  color: var(--tinta);
+  font-weight: 600;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12.5px;
+}
+.links a {
+  color: var(--tinta-fantasma);
+  text-decoration: underline;
+  text-decoration-color: var(--linha-viva);
+  text-underline-offset: 2px;
+  max-width: 32ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.links a:hover { color: var(--tinta); }
+.links em { font-style: normal; }
+
+.gancho {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--tinta);
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
